@@ -121,13 +121,6 @@ export default function App() {
   const [customers, setCustomers] = useState(INITIAL_CUSTOMERS);
   const [requests, setRequests] = useState(INITIAL_REQUESTS);
 
-  const [pastEmails, setPastEmails] = useState([
-    'an.nguyen@company.com',
-    'binh.tran@company.com',
-    'tuyen.le@company.com',
-    'ban-giam-doc@company.com'
-  ]);
-
   const [selectedPrintRequest, setSelectedPrintRequest] = useState(INITIAL_REQUESTS[0]);
 
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
@@ -139,8 +132,6 @@ export default function App() {
   const [reqWorkType, setReqWorkType] = useState('REPAIR_SINGLE');
   const [reqReasonType, setReqReasonType] = useState('SERVICE');
   const [reqNote, setReqNote] = useState('');
-  const [reqEmailsInput, setReqEmailsInput] = useState('');
-  const [selectedEmailChips, setSelectedEmailChips] = useState(['an.nguyen@company.com']);
   const [reqItemsList, setReqItemsList] = useState([{ itemId: 'CMOS-2500', quantity: 5, serialNotes: '' }]);
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -270,19 +261,6 @@ export default function App() {
     reader.readAsText(file, 'UTF-8');
   };
 
-  const handleAddEmailChip = (email) => {
-    if (email && !selectedEmailChips.includes(email)) {
-      setSelectedEmailChips([...selectedEmailChips, email]);
-      if (!pastEmails.includes(email)) {
-        setPastEmails([...pastEmails, email]);
-      }
-    }
-  };
-
-  const handleRemoveEmailChip = (email) => {
-    setSelectedEmailChips(selectedEmailChips.filter(e => e !== email));
-  };
-
   const handleOpenItemModal = (item = null) => {
     if (item) {
       setEditingItem(item);
@@ -343,7 +321,7 @@ export default function App() {
       approvedBy: '',
       items: formattedItems,
       note: reqNote,
-      recipientEmails: selectedEmailChips
+      recipientEmails: ['an.nguyen@company.com', 'binh.tran@company.com']
     };
 
     setRequests([newReq, ...requests]);
@@ -1536,30 +1514,6 @@ export default function App() {
                 <button type="button" onClick={() => setReqItemsList([...reqItemsList, { itemId: 'CMOS-2500', quantity: 1, serialNotes: '' }])} className="text-indigo-600 font-bold text-xs flex items-center gap-1 mt-1">
                   <Plus className="w-3.5 h-3.5" /> Thêm mặt hàng
                 </button>
-              </div>
-
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Email Thông Báo:</label>
-                <div className="flex flex-wrap gap-1.5 mb-2">
-                  {selectedEmailChips.map(email => (
-                    <span key={email} className="bg-indigo-100 text-indigo-800 font-mono px-2 py-0.5 rounded-full flex items-center gap-1 text-2xs sm:text-xs">
-                      {email}
-                      <button type="button" onClick={() => handleRemoveEmailChip(email)}><X className="w-3 h-3 text-indigo-600" /></button>
-                    </span>
-                  ))}
-                </div>
-                <div className="flex gap-2">
-                  <input
-                    type="email"
-                    placeholder="Nhập email..."
-                    value={reqEmailsInput}
-                    onChange={(e) => setReqEmailsInput(e.target.value)}
-                    className="flex-grow border border-slate-300 rounded p-1.5 font-mono text-xs"
-                  />
-                  <button type="button" onClick={() => { handleAddEmailChip(reqEmailsInput); setReqEmailsInput(''); }} className="px-3 py-1.5 bg-slate-800 text-white rounded text-xs font-semibold">
-                    Thêm
-                  </button>
-                </div>
               </div>
 
               <div className="flex justify-end gap-2 pt-3 border-t">
