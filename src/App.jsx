@@ -41,7 +41,7 @@ const INITIAL_WAREHOUSES = [
 ];
 
 const INITIAL_EMPLOYEES = [
-  { id: 'NV001', name: 'Lê Văn Tuyên', title: 'Nhân viên Kỹ thuật', email: 'tuyen.le@company.com', role: 'User' },
+  { id: 'NV001', name: 'Nguyễn Trần Cường', title: 'Nhân viên Kỹ thuật', email: 'cuongnt@honghatst.vn', role: 'User' },
   { id: 'NV002', name: 'Nguyễn Văn An', title: 'Quản lý Kho', email: 'an.nguyen@company.com', role: 'Management' },
   { id: 'NV003', name: 'Trần Thị Bình', title: 'Thủ kho chính', email: 'binh.tran@company.com', role: 'Warehouse' },
   { id: 'NV004', name: 'Phạm Minh Đức', title: 'Nhân viên Kinh doanh', email: 'duc.pham@company.com', role: 'User' },
@@ -65,7 +65,7 @@ const INITIAL_REQUESTS = [
   {
     id: '01/26/XK',
     type: 'EXPORT',
-    requesterName: 'Lê Văn Tuyên',
+    requesterName: 'Nguyễn Trần Cường',
     customerName: 'BIDV CN Thành Công',
     warehouseId: 'WH01',
     workType: 'REPAIR_SINGLE',
@@ -77,7 +77,7 @@ const INITIAL_REQUESTS = [
       { itemId: 'CMOS-2500', name: 'Pin CMOS máy Move2500', quantity: 5, serialNotes: 'SN: 88201-88205' }
     ],
     note: 'Xuất linh kiện thay thế cho khách hàng',
-    recipientEmails: ['an.nguyen@company.com', 'binh.tran@company.com']
+    recipientEmails: ['cuongnt@honghatst.vn']
   }
 ];
 
@@ -126,7 +126,7 @@ export default function App() {
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
   const [newRequestType, setNewRequestType] = useState('EXPORT');
   const [customVoucherId, setCustomVoucherId] = useState('');
-  const [reqRequesterName, setReqRequesterName] = useState('Lê Văn Tuyên');
+  const [reqRequesterName, setReqRequesterName] = useState('Nguyễn Trần Cường');
   const [reqCustomerName, setReqCustomerName] = useState('BIDV CN Thành Công');
   const [reqWarehouse, setReqWarehouse] = useState('WH01');
   const [reqWorkType, setReqWorkType] = useState('REPAIR_SINGLE');
@@ -321,7 +321,7 @@ export default function App() {
       approvedBy: '',
       items: formattedItems,
       note: reqNote,
-      recipientEmails: ['an.nguyen@company.com', 'binh.tran@company.com']
+      recipientEmails: ['cuongnt@honghatst.vn', 'an.nguyen@company.com']
     };
 
     setRequests([newReq, ...requests]);
@@ -374,7 +374,7 @@ export default function App() {
   };
 
   const handleOpenGmailWeb = (req) => {
-    const emails = (req.recipientEmails || ['an.nguyen@company.com']).join(',');
+    const emails = (req.recipientEmails || ['cuongnt@honghatst.vn']).join(',');
     const subject = encodeURIComponent(`[THÔNG BÁO KHO] Phiếu ${req.id} - ${req.customerName}`);
     const itemsSummary = req.items.map(i => `- ${i.name} (SL: ${i.quantity})`).join('\n');
     const body = encodeURIComponent(
@@ -936,7 +936,7 @@ export default function App() {
           </div>
         )}
 
-        {/* ================= TAB 4: PRINTABLE VOUCHER & GMAIL WEB INTEGRATION ================= */}
+        {/* ================= TAB 4: PRINTABLE VOUCHER & GMAIL WEB INTEGRATION (CĂN LỀ TRÁI) ================= */}
         {activeTab === 'print' && selectedPrintRequest && (
           <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-white p-4 rounded-xl border border-slate-200 shadow-sm print:hidden gap-3">
@@ -975,8 +975,8 @@ export default function App() {
               </div>
             </div>
 
-            {/* Mẫu Phiếu A4 Responsive */}
-            <div className="bg-white p-6 sm:p-10 rounded-xl border border-slate-300 shadow-md max-w-4xl mx-auto text-slate-900 font-sans print:shadow-none print:border-none print:p-0 overflow-x-auto">
+            {/* Mẫu Phiếu A4 Căn Lề Trái */}
+            <div className="bg-white p-6 sm:p-10 rounded-xl border border-slate-300 shadow-md max-w-4xl mx-auto text-slate-900 font-sans print:shadow-none print:border-none print:p-0 overflow-x-auto text-left">
               
               <div className="flex justify-between items-start mb-4">
                 <div></div>
@@ -1001,20 +1001,21 @@ export default function App() {
                 </p>
               </div>
 
-              <div className="text-xs sm:text-sm space-y-2.5 mb-6 leading-relaxed">
+              {/* Nội dung căn lề trái chuẩn xác */}
+              <div className="text-xs sm:text-sm space-y-3 mb-6 leading-relaxed text-left">
                 {selectedPrintRequest.type === 'IMPORT' ? (
                   <>
-                    <p><span className="font-bold">1. Họ và tên người giao hàng :</span> {selectedPrintRequest.requesterName}</p>
-                    <p><span className="font-bold">2. Đơn vị / Nhà cung cấp :</span> {selectedPrintRequest.customerName}</p>
+                    <p className="text-left"><span className="font-bold">1. Họ và tên người giao hàng :</span> {selectedPrintRequest.requesterName}</p>
+                    <p className="text-left"><span className="font-bold">2. Đơn vị / Nhà cung cấp :</span> {selectedPrintRequest.customerName}</p>
                   </>
                 ) : (
                   <>
-                    <p><span className="font-bold">1. Họ và tên người yêu cầu :</span> {selectedPrintRequest.requesterName}</p>
-                    <p><span className="font-bold">2. Tên khách hàng :</span> {selectedPrintRequest.customerName}</p>
+                    <p className="text-left"><span className="font-bold">1. Họ và tên người yêu cầu :</span> {selectedPrintRequest.requesterName}</p>
+                    <p className="text-left"><span className="font-bold">2. Tên khách hàng :</span> {selectedPrintRequest.customerName}</p>
                   </>
                 )}
 
-                <div className="flex flex-wrap items-center gap-4 sm:gap-6">
+                <div className="flex flex-wrap items-center justify-start gap-4 sm:gap-6 text-left">
                   <span className="font-bold">3. Thực hiện tại kho:</span>
                   <label className="flex items-center gap-1.5 cursor-pointer">
                     <input type="checkbox" checked={selectedPrintRequest.warehouseId === 'WH01'} readOnly className="w-4 h-4 accent-indigo-600" />
@@ -1028,29 +1029,29 @@ export default function App() {
 
                 {selectedPrintRequest.type !== 'IMPORT' && (
                   <>
-                    <div className="space-y-1.5">
-                      <span className="font-bold">4. Sửa chữa/ Bán máy:</span>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pl-4 sm:pl-6">
-                        <label className="flex items-center gap-2">
+                    <div className="space-y-1.5 text-left">
+                      <span className="font-bold block">4. Sửa chữa/ Bán máy:</span>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pl-4 sm:pl-6 text-left">
+                        <label className="flex items-center gap-2 justify-start">
                           <input type="checkbox" checked={selectedPrintRequest.workType === 'REPAIR_SINGLE'} readOnly className="w-4 h-4 accent-indigo-600" />
                           <span>Sửa chữa lẻ</span>
                         </label>
-                        <label className="flex items-center gap-2">
+                        <label className="flex items-center gap-2 justify-start">
                           <input type="checkbox" checked={selectedPrintRequest.workType === 'REPAIR_PROJ'} readOnly className="w-4 h-4 accent-indigo-600" />
                           <span>Sửa chữa dự án</span>
                         </label>
-                        <label className="flex items-center gap-2">
+                        <label className="flex items-center gap-2 justify-start">
                           <input type="checkbox" checked={selectedPrintRequest.workType === 'SELL_SINGLE'} readOnly className="w-4 h-4 accent-indigo-600" />
                           <span>Bán máy lẻ</span>
                         </label>
-                        <label className="flex items-center gap-2">
+                        <label className="flex items-center gap-2 justify-start">
                           <input type="checkbox" checked={selectedPrintRequest.workType === 'SELL_PROJ'} readOnly className="w-4 h-4 accent-indigo-600" />
                           <span>Bán máy dự án</span>
                         </label>
                       </div>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-4 sm:gap-6">
+                    <div className="flex flex-wrap items-center justify-start gap-4 sm:gap-6 text-left">
                       <span className="font-bold">5. Lý do xuất kho:</span>
                       <label className="flex items-center gap-1.5">
                         <input type="checkbox" checked={selectedPrintRequest.reasonType === 'SERVICE'} readOnly className="w-4 h-4 accent-indigo-600" />
@@ -1069,15 +1070,15 @@ export default function App() {
                 )}
               </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs sm:text-sm border-collapse border border-slate-900 mb-6">
+              <div className="overflow-x-auto text-left">
+                <table className="w-full text-xs sm:text-sm border-collapse border border-slate-900 mb-6 text-left">
                   <thead>
                     <tr className="bg-slate-100 text-center font-bold">
                       <th className="border border-slate-900 p-2 w-10">STT</th>
-                      <th className="border border-slate-900 p-2">TÊN HÀNG HÓA</th>
+                      <th className="border border-slate-900 p-2 text-left">TÊN HÀNG HÓA</th>
                       <th className="border border-slate-900 p-2">PART NO</th>
                       <th className="border border-slate-900 p-2 w-20 sm:w-24">SỐ LƯỢNG</th>
-                      <th className="border border-slate-900 p-2">GHI CHÚ – SERIAL</th>
+                      <th className="border border-slate-900 p-2 text-left">GHI CHÚ – SERIAL</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1091,8 +1092,8 @@ export default function App() {
                       </tr>
                     ))}
                     <tr className="font-bold text-center">
-                      <td colSpan={3} className="border border-slate-900 p-2">Cộng</td>
-                      <td className="border border-slate-900 p-2">
+                      <td colSpan={3} className="border border-slate-900 p-2 text-right">Cộng</td>
+                      <td className="border border-slate-900 p-2 text-center">
                         {selectedPrintRequest.items.reduce((sum, item) => sum + Number(item.quantity), 0)}
                       </td>
                       <td className="border border-slate-900 p-2"></td>
