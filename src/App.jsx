@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Package, 
   TrendingDown, 
@@ -67,8 +67,8 @@ const INITIAL_REQUESTS = [
     requesterName: 'Phan Thị Khánh Phương',
     customerName: 'BIDV CN Thành Công',
     warehouseId: 'WH01',
-    workType: 'REPAIR_SINGLE', // REPAIR_SINGLE, REPAIR_PROJECT, SALE_SINGLE, SALE_PROJECT
-    reasonType: 'INTERNAL', // SERVICE, WARRANTY, INTERNAL
+    workType: 'REPAIR_SINGLE',
+    reasonType: 'INTERNAL',
     date: '2026-08-03',
     status: 'APPROVED',
     approvedBy: 'Nguyễn Văn An',
@@ -105,6 +105,16 @@ const INITIAL_REQUESTS = [
 ];
 
 export default function App() {
+  // Nạp tự động Tailwind CSS CDN khi khởi chạy để tránh lỗi vỡ giao diện trên Vercel
+  useEffect(() => {
+    if (!document.getElementById('tailwind-cdn')) {
+      const script = document.createElement('script');
+      script.id = 'tailwind-cdn';
+      script.src = 'https://cdn.tailwindcss.com';
+      document.head.appendChild(script);
+    }
+  }, []);
+
   const [currentUserRole, setCurrentUserRole] = useState('Management');
   const [activeTab, setActiveTab] = useState('dashboard');
   
