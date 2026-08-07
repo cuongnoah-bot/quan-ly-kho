@@ -265,6 +265,15 @@ export default function App() {
       customers.forEach(c => {
         csvContent += `"${c.code}","${c.fullName}","${c.contact}","${c.phone}","${c.email}","${c.address}"\n`;
       });
+    } else if (dataType === 'STOCKTAKE') {
+      const whName = stocktakeWH === 'WH01' ? 'Hà Nội' : 'Hồ Chí Minh';
+      csvContent += `Mã Hàng,Tên Hàng Hóa,Tồn Máy Tính (${whName}),Tồn Thực Tế,Chênh Lệch\n`;
+      items.forEach(i => {
+        const currentStock = i.stock[stocktakeWH] || 0;
+        const inputVal = stocktakeInputs[i.id] !== undefined ? stocktakeInputs[i.id] : currentStock;
+        const diff = Number(inputVal) - currentStock;
+        csvContent += `"${i.id}","${i.name}",${currentStock},${inputVal},${diff}\n`;
+      });
     }
 
     const encodedUri = encodeURI(csvContent);
@@ -275,7 +284,8 @@ export default function App() {
       IMPORT_EXPORT_REPORT: 'Bao_Cao_Xuat_Nhap_Ton.csv',
       REQUESTS: 'Danh_Sach_Phieu_Nhap_Xuat.csv',
       EMPLOYEES: 'Danh_Sach_Nhan_Vien.csv',
-      CUSTOMERS: 'Danh_Sach_Khach_Hang.csv'
+      CUSTOMERS: 'Danh_Sach_Khach_Hang.csv',
+      STOCKTAKE: `Bao_Cao_Kiem_Ke_Kho_${stocktakeWH}.csv`
     };
     link.setAttribute("download", fileNameMap[dataType] || `Du_Lieu_${dataType}.csv`);
     document.body.appendChild(link);
@@ -349,6 +359,66 @@ export default function App() {
         }
         setRequests(newReqs);
         showToast(`Đã nhập thành công ${addedReqCount} phiếu Nhập/Xuất kho từ file Excel!`);
+      } else if (dataType === 'EMPLOYEES' && rows.length > 1) {
+        const newEmps = [...employees];
+        let addedCount = 0;
+        for (let i = 1; i < rows.length; i++) {
+          const r = rows[i];
+          if (r.length >= 2 && r[0]) {
+            const exists = newEmps.find(emp => emp.id === r[0]);
+            if (!exists) {
+              newEmps.push({ 
+                id: r[0], 
+                name: r[1] || '', 
+                title: r[2] || '', 
+                email: r[3] || '', 
+                role: r[4] || 'User' 
+              });
+              addedCount++;
+            }
+          }
+        }
+        setEmployees(newEmps);
+        showToast(`Đã nhập thành công ${addedCount} nhân viên từ file Excel!`);
+      } else if (dataType === 'CUSTOMERS' && rows.length > 1) {
+        const newCusts = [...customers];
+        let addedCount = 0;
+        for (let i = 1; i < rows.length; i++) {
+          const r = rows[i];
+          if (r.length >= 2 && r[0]) {
+            const exists = newCusts.find(c => c.code === r[0]);
+            if (!exists) {
+              newCusts.push({ 
+                id: `KH00${newCusts.length + 1}`, 
+                code: r[0], 
+                fullName: r[1] || r[0], 
+                contact: r[2] || '', 
+                phone: r[3] || '', 
+                email: r[4] || '', 
+                address: r[5] || '' 
+              });
+              addedCount++;
+            }
+          }
+        }
+        setCustomers(newCusts);
+        showToast(`Đã nhập thành công ${addedCount} khách hàng từ file Excel!`);
+      } else if (dataType === 'STOCKTAKE' && rows.length > 1) {
+        const newInputs = { ...stocktakeInputs };
+        let updatedCount = 0;
+        for (let i = 1; i < rows.length; i++) {
+          const r = rows[i];
+          if (r.length >= 2 && r[0]) {
+            const itemId = r[0];
+            const actualQty = r[3] !== undefined && r[3] !== '' ? Number(r[3]) : Number(r[2]);
+            if (!isNaN(actualQty)) {
+              newInputs[itemId] = actualQty;
+              updatedCount++;
+            }
+          }
+        }
+        setStocktakeInputs(newInputs);
+        showToast(`Đã nhập số lượng kiểm kê cho ${updatedCount} mặt hàng từ file Excel!`);
       }
       e.target.value = null;
     };
@@ -1400,15 +1470,19 @@ export default function App() {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => handleOpenEmpModal()}
-                    className="p-1.5 bg-indigo-600 text-white rounded-lg text-xs font-bold flex items-center gap-1"
+                    className="p-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold flex items-center gap-1 shadow-sm"
                   >
                     <Plus className="w-3.5 h-3.5" /> Thêm
                   </button>
+                  <label className="p-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-xs font-bold cursor-pointer border border-indigo-200 flex items-center gap-1">
+                    <Upload className="w-3.5 h-3.5" /> Nhập Excel
+                    <input type="file" accept=".csv" onChange={(e) => handleImportCSV(e, 'EMPLOYEES')} className="hidden" />
+                  </label>
                   <button
                     onClick={() => handleExportCSV('EMPLOYEES')}
-                    className="p-1.5 bg-emerald-600 text-white rounded-lg text-xs font-bold flex items-center gap-1"
+                    className="p-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold flex items-center gap-1 shadow-sm"
                   >
-                    <Download className="w-3.5 h-3.5" /> Excel
+                    <Download className="w-3.5 h-3.5" /> Xuất Excel
                   </button>
                 </div>
               </div>
@@ -1452,15 +1526,19 @@ export default function App() {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => handleOpenCustModal()}
-                    className="p-1.5 bg-indigo-600 text-white rounded-lg text-xs font-bold flex items-center gap-1"
+                    className="p-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold flex items-center gap-1 shadow-sm"
                   >
                     <Plus className="w-3.5 h-3.5" /> Thêm
                   </button>
+                  <label className="p-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-xs font-bold cursor-pointer border border-indigo-200 flex items-center gap-1">
+                    <Upload className="w-3.5 h-3.5" /> Nhập Excel
+                    <input type="file" accept=".csv" onChange={(e) => handleImportCSV(e, 'CUSTOMERS')} className="hidden" />
+                  </label>
                   <button
                     onClick={() => handleExportCSV('CUSTOMERS')}
-                    className="p-1.5 bg-emerald-600 text-white rounded-lg text-xs font-bold flex items-center gap-1"
+                    className="p-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold flex items-center gap-1 shadow-sm"
                   >
-                    <Download className="w-3.5 h-3.5" /> Excel
+                    <Download className="w-3.5 h-3.5" /> Xuất Excel
                   </button>
                 </div>
               </div>
@@ -1497,7 +1575,7 @@ export default function App() {
           </div>
         )}
 
-        {/* ================= TAB 7: KIỂM KÊ KHO thực tế ================= */}
+        {/* ================= TAB 7: KIỂM KÊ KHO THỰC TẾ ================= */}
         {activeTab === 'stocktake' && (
           <div className="bg-white p-4 sm:p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -1506,16 +1584,30 @@ export default function App() {
                 <p className="text-xs text-slate-500">Đối chiếu số lượng phần mềm ghi nhận với kiểm đếm kho thực tế.</p>
               </div>
 
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-slate-700">Chọn Kho:</span>
-                <select
-                  value={stocktakeWH}
-                  onChange={(e) => setStocktakeWH(e.target.value)}
-                  className="border border-slate-300 rounded-lg text-xs font-bold p-2 bg-slate-50"
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="flex items-center gap-2 mr-2">
+                  <span className="text-xs font-bold text-slate-700">Chọn Kho:</span>
+                  <select
+                    value={stocktakeWH}
+                    onChange={(e) => setStocktakeWH(e.target.value)}
+                    className="border border-slate-300 rounded-lg text-xs font-bold p-2 bg-slate-50"
+                  >
+                    <option value="WH01">Kho Hà Nội</option>
+                    <option value="WH02">Kho Hồ Chí Minh</option>
+                  </select>
+                </div>
+
+                <label className="flex items-center gap-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-2 rounded-lg text-xs font-bold cursor-pointer border border-indigo-200">
+                  <Upload className="w-3.5 h-3.5" /> Nhập Excel Kiểm Kê
+                  <input type="file" accept=".csv" onChange={(e) => handleImportCSV(e, 'STOCKTAKE')} className="hidden" />
+                </label>
+
+                <button
+                  onClick={() => handleExportCSV('STOCKTAKE')}
+                  className="flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg text-xs font-bold shadow-sm"
                 >
-                  <option value="WH01">Kho Hà Nội</option>
-                  <option value="WH02">Kho Hồ Chí Minh</option>
-                </select>
+                  <Download className="w-3.5 h-3.5" /> Xuất Excel Kiểm Kê
+                </button>
               </div>
             </div>
 
