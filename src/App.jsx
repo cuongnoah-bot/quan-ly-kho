@@ -142,6 +142,16 @@ function doPost(e) {
 }`;
 
 export default function App() {
+  // --- TỰ ĐỘNG CHÈN TAILWIND CSS CDN ĐỂ ĐẢM BẢO GIAO DIỆN KHÔNG BỊ MẤT DẠNG NẾU VITE CHƯA CẤU HÌNH ---
+  useEffect(() => {
+    if (!document.getElementById('tailwind-cdn')) {
+      const script = document.createElement('script');
+      script.id = 'tailwind-cdn';
+      script.src = 'https://cdn.tailwindcss.com';
+      document.head.appendChild(script);
+    }
+  }, []);
+
   // --- STATES ---
   const [currentUserRole, setCurrentUserRole] = useState('Management'); // Management, Warehouse, User
   const [activeTab, setActiveTab] = useState('dashboard'); // dashboard, inventory, requests, print, directory, stocktake, googleSheet
