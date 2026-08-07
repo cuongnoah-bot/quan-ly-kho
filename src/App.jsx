@@ -91,13 +91,13 @@ const INITIAL_REQUESTS = [
     warehouseId: 'WH01',
     destWarehouseId: '',
     workType: 'STOCK_IN',
-    reasonType: 'SERVICE',
+    reasonType: '',
     date: '2026-08-06',
     status: 'APPROVED',
     approvedBy: 'Nguyễn Văn An',
-    contractNo: 'HD-2026/FPT',
-    paymentAmount: '150.000.000',
-    paymentDate: '2026-08-05',
+    contractNo: '',
+    paymentAmount: '',
+    paymentDate: '',
     items: [
       { itemId: 'MH001', name: 'Máy tính xách tay Dell XPS 15', partNo: 'DELL-XPS15', quantity: 10, serialNotes: 'Lô hàng mới nhập' },
       { itemId: 'CMOS-2500', name: 'Pin CMOS máy Move2500', partNo: 'CMOS-M25', quantity: 20, serialNotes: 'Lô hàng nhập kho' }
@@ -537,10 +537,10 @@ export default function App() {
       warehouseId: reqWarehouse,
       destWarehouseId: newRequestType === 'TRANSFER' ? reqDestWarehouse : '',
       workType: reqWorkType,
-      reasonType: reqReasonType,
-      contractNo: reqContractNo,
-      paymentAmount: reqPaymentAmount,
-      paymentDate: reqPaymentDate,
+      reasonType: newRequestType === 'IMPORT' ? '' : reqReasonType,
+      contractNo: newRequestType === 'IMPORT' ? '' : reqContractNo,
+      paymentAmount: newRequestType === 'IMPORT' ? '' : reqPaymentAmount,
+      paymentDate: newRequestType === 'IMPORT' ? '' : reqPaymentDate,
       date: new Date().toISOString().split('T')[0],
       status: 'PENDING',
       approvedBy: '',
@@ -1472,26 +1472,28 @@ export default function App() {
                   </div>
                 )}
 
-                {/* Mục 5 Lý do xuất/nhập/chuyển kho */}
-                <div className="space-y-1 pt-1">
-                  <span className="font-semibold block">
-                    {selectedPrintRequest.type === 'IMPORT' ? '4. Lý do nhập kho:' : selectedPrintRequest.type === 'TRANSFER' ? '4. Lý do chuyển kho:' : '5. Lý do xuất kho:'}
-                  </span>
-                  <div className="flex items-center gap-8 pl-6 pt-1">
-                    <span className="inline-flex items-center gap-2">
-                      <span className="font-bold">{selectedPrintRequest.reasonType === 'SERVICE' ? '☑' : '☐'}</span> Dịch vụ
+                {/* Mục Lý do chỉ hiển thị khi không phải là Phiếu Nhập Kho */}
+                {selectedPrintRequest.type !== 'IMPORT' && (
+                  <div className="space-y-1 pt-1">
+                    <span className="font-semibold block">
+                      {selectedPrintRequest.type === 'TRANSFER' ? '4. Lý do chuyển kho:' : '5. Lý do xuất kho:'}
                     </span>
-                    <span className="inline-flex items-center gap-2">
-                      <span className="font-bold">{selectedPrintRequest.reasonType === 'WARRANTY' ? '☑' : '☐'}</span> Bảo hành
-                    </span>
-                    <span className="inline-flex items-center gap-2">
-                      <span className="font-bold">{selectedPrintRequest.reasonType === 'INTERNAL' ? '☑' : '☐'}</span> Nội bộ
-                    </span>
+                    <div className="flex items-center gap-8 pl-6 pt-1">
+                      <span className="inline-flex items-center gap-2">
+                        <span className="font-bold">{selectedPrintRequest.reasonType === 'SERVICE' ? '☑' : '☐'}</span> Dịch vụ
+                      </span>
+                      <span className="inline-flex items-center gap-2">
+                        <span className="font-bold">{selectedPrintRequest.reasonType === 'WARRANTY' ? '☑' : '☐'}</span> Bảo hành
+                      </span>
+                      <span className="inline-flex items-center gap-2">
+                        <span className="font-bold">{selectedPrintRequest.reasonType === 'INTERNAL' ? '☑' : '☐'}</span> Nội bộ
+                      </span>
+                    </div>
                   </div>
-                </div>
+                )}
 
-                {/* Các mục tài chính/hợp đồng chỉ hiện khi có dữ liệu hoặc không phải chuyển kho */}
-                {selectedPrintRequest.type !== 'TRANSFER' && (
+                {/* Các mục hợp đồng / tài chính chỉ hiển thị khi là Phiếu Xuất Kho */}
+                {selectedPrintRequest.type === 'EXPORT' && (
                   <>
                     <div className="flex pt-1">
                       <span className="w-56 font-semibold">6. Số Hợp đồng/ Báo giá:</span>
@@ -1904,35 +1906,38 @@ export default function App() {
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">Lý do giao dịch:</label>
-                  <select
-                    value={reqReasonType}
-                    onChange={(e) => setReqReasonType(e.target.value)}
-                    className="w-full border border-slate-300 rounded-lg p-2"
-                  >
-                    <option value="INTERNAL">Nội bộ</option>
-                    <option value="SERVICE">Dịch vụ</option>
-                    <option value="WARRANTY">Bảo hành</option>
-                  </select>
-                </div>
-
-                {newRequestType !== 'TRANSFER' && (
+              {/* Chỉ hiển thị Lý do, Hợp đồng & Thanh toán nếu KHÔNG phải Phiếu Nhập Kho */}
+              {newRequestType !== 'IMPORT' && (
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block font-bold text-slate-700 mb-1">Số Hợp đồng/ Báo giá:</label>
-                    <input
-                      type="text"
-                      value={reqContractNo}
-                      onChange={(e) => setReqContractNo(e.target.value)}
-                      placeholder="VD: HD-2026/01"
+                    <label className="block font-bold text-slate-700 mb-1">Lý do giao dịch:</label>
+                    <select
+                      value={reqReasonType}
+                      onChange={(e) => setReqReasonType(e.target.value)}
                       className="w-full border border-slate-300 rounded-lg p-2"
-                    />
+                    >
+                      <option value="INTERNAL">Nội bộ</option>
+                      <option value="SERVICE">Dịch vụ</option>
+                      <option value="WARRANTY">Bảo hành</option>
+                    </select>
                   </div>
-                )}
-              </div>
 
-              {newRequestType !== 'TRANSFER' && (
+                  {newRequestType === 'EXPORT' && (
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">Số Hợp đồng/ Báo giá:</label>
+                      <input
+                        type="text"
+                        value={reqContractNo}
+                        onChange={(e) => setReqContractNo(e.target.value)}
+                        placeholder="VD: HD-2026/01"
+                        className="w-full border border-slate-300 rounded-lg p-2"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {newRequestType === 'EXPORT' && (
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block font-bold text-slate-700 mb-1">Số tiền (nếu thanh toán):</label>
