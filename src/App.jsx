@@ -27,6 +27,7 @@ import {
   Edit,
   Trash2,
   Download,
+  Upload,
   Code,
   Copy,
   Radio
@@ -36,7 +37,6 @@ import {
 const INITIAL_WAREHOUSES = [
   { id: 'WH01', name: 'Hà Nội', location: 'Cầu Giấy, Hà Nội' },
   { id: 'WH02', name: 'Hồ Chí Minh', location: 'Quận 9, TP. HCM' },
-  { id: 'WH03', name: 'Kho Linh Kiện', location: 'Bắc Ninh' },
 ];
 
 const INITIAL_EMPLOYEES = [
@@ -53,11 +53,11 @@ const INITIAL_CUSTOMERS = [
 ];
 
 const INITIAL_ITEMS = [
-  { id: 'CMOS-2500', name: 'Pin CMOS máy Move2500', unit: 'Cái', minThreshold: 10, stock: { WH01: 15, WH02: 5, WH03: 2 }, price: 150000 },
-  { id: 'MH001', name: 'Máy tính xách tay Dell XPS 15', unit: 'Bộ', minThreshold: 5, stock: { WH01: 8, WH02: 3, WH03: 0 }, price: 35000000 },
-  { id: 'MH002', name: 'Màn hình Dell UltraSharp 27"', unit: 'Cái', minThreshold: 10, stock: { WH01: 4, WH02: 12, WH03: 2 }, price: 9500000 },
-  { id: 'MH003', name: 'Bàn phím Cơ Logitech MX Keys', unit: 'Cái', minThreshold: 15, stock: { WH01: 25, WH02: 8, WH03: 5 }, price: 2800000 },
-  { id: 'MH004', name: 'Chuột Không Dây Logitech MX Master 3S', unit: 'Cái', minThreshold: 12, stock: { WH01: 3, WH02: 15, WH03: 8 }, price: 2400000 },
+  { id: 'CMOS-2500', name: 'Pin CMOS máy Move2500', unit: 'Cái', minThreshold: 10, stock: { WH01: 15, WH02: 5 } },
+  { id: 'MH001', name: 'Máy tính xách tay Dell XPS 15', unit: 'Bộ', minThreshold: 5, stock: { WH01: 8, WH02: 3 } },
+  { id: 'MH002', name: 'Màn hình Dell UltraSharp 27"', unit: 'Cái', minThreshold: 10, stock: { WH01: 4, WH02: 12 } },
+  { id: 'MH003', name: 'Bàn phím Cơ Logitech MX Keys', unit: 'Cái', minThreshold: 15, stock: { WH01: 25, WH02: 8 } },
+  { id: 'MH004', name: 'Chuột Không Dây Logitech MX Master 3S', unit: 'Cái', minThreshold: 12, stock: { WH01: 3, WH02: 15 } },
 ];
 
 const INITIAL_REQUESTS = [
@@ -69,10 +69,7 @@ const INITIAL_REQUESTS = [
     warehouseId: 'WH01',
     workType: 'REPAIR_SINGLE',
     reasonType: 'SERVICE',
-    contractNo: '2607023BG/HH',
-    paidAmount: '',
-    paymentDate: '',
-    date: '2026-08-04',
+    date: '2026-08-07',
     status: 'APPROVED',
     approvedBy: 'Nguyễn Văn An',
     items: [
@@ -80,61 +77,23 @@ const INITIAL_REQUESTS = [
     ],
     note: 'Xuất linh kiện thay thế cho khách hàng',
     recipientEmails: ['an.nguyen@company.com', 'binh.tran@company.com']
-  },
-  {
-    id: '02/26/XK',
-    type: 'INSTALL',
-    requesterName: 'Phạm Minh Đức',
-    customerName: 'Công ty Cổ phần FPT',
-    warehouseId: 'WH01',
-    workType: 'SELL_PROJ',
-    reasonType: 'SERVICE',
-    contractNo: '102938/HD-FPT',
-    paidAmount: '35.000.000 VNĐ',
-    paymentDate: '2026-08-05',
-    date: '2026-08-06',
-    status: 'PENDING',
-    approvedBy: '',
-    items: [
-      { itemId: 'MH001', name: 'Máy tính xách tay Dell XPS 15', quantity: 1, serialNotes: 'ST: DELL-XPS-992' }
-    ],
-    note: 'Giao máy tính và cài đặt phần mềm dự án FPT',
-    recipientEmails: ['binh.tran@company.com']
   }
 ];
 
-// Mã Google Apps Script mẫu cho Google Sheets
 const GOOGLE_APPS_SCRIPT_CODE = `// GOOGLE APPS SCRIPT CODE FOR WAREHOUSE MANAGEMENT
-// Copy đoạn mã này vào Tiện ích mở rộng > Apps Script trong Google Sheet của bạn
-
 function doPost(e) {
   try {
     var data = JSON.parse(e.postData.contents);
     var ss = SpreadsheetApp.getActiveSpreadsheet();
-    
-    // Ghi danh mục Tồn kho
     if (data.type === 'INVENTORY_SYNC') {
       var sheet = ss.getSheetByName('TonKho') || ss.insertSheet('TonKho');
       sheet.clear();
-      sheet.appendRow(['Mã Hàng', 'Tên Hàng Hóa', 'Đơn Vị', 'Kho Hà Nội', 'Kho Hồ Chí Minh', 'Kho Linh Kiện', 'Tổng Tồn', 'Ngưỡng An Toàn']);
+      sheet.appendRow(['Mã Hàng', 'Tên Hàng Hóa', 'Đơn Vị', 'Kho Hà Nội', 'Kho HCM', 'Tổng Tồn']);
       data.items.forEach(function(item) {
-        var total = (item.stock.WH01 || 0) + (item.stock.WH02 || 0) + (item.stock.WH03 || 0);
-        sheet.appendRow([item.id, item.name, item.unit, item.stock.WH01 || 0, item.stock.WH02 || 0, item.stock.WH03 || 0, total, item.minThreshold]);
+        var total = (item.stock.WH01 || 0) + (item.stock.WH02 || 0);
+        sheet.appendRow([item.id, item.name, item.unit, item.stock.WH01 || 0, item.stock.WH02 || 0, total]);
       });
     }
-    
-    // Ghi lịch sử Yêu cầu Xuất / Nhập
-    if (data.type === 'REQUESTS_SYNC') {
-      var sheetReq = ss.getSheetByName('PhieuXuatNhap') || ss.insertSheet('PhieuXuatNhap');
-      if (sheetReq.getLastRow() === 0) {
-        sheetReq.appendRow(['Số Phiếu', 'Loại Phiếu', 'Người Yêu Cầu', 'Khách Hàng', 'Kho', 'Số HD/Báo Giá', 'Ngày', 'Trạng Thái', 'Vật Tư']);
-      }
-      data.requests.forEach(function(req) {
-        var itemsStr = req.items.map(function(i){ return i.name + ' (SL: ' + i.quantity + ')'; }).join('; ');
-        sheetReq.appendRow([req.id, req.type, req.requesterName, req.customerName, req.warehouseId, req.contractNo, req.date, req.status, itemsStr]);
-      });
-    }
-
     return ContentService.createTextOutput(JSON.stringify({ result: 'success' })).setMimeType(ContentService.MimeType.JSON);
   } catch (err) {
     return ContentService.createTextOutput(JSON.stringify({ result: 'error', error: err.toString() })).setMimeType(ContentService.MimeType.JSON);
@@ -142,7 +101,6 @@ function doPost(e) {
 }`;
 
 export default function App() {
-  // --- TỰ ĐỘNG CHÈN TAILWIND CSS CDN ĐỂ ĐẢM BẢO GIAO DIỆN KHÔNG BỊ MẤT DẠNG NẾU VITE CHƯA CẤU HÌNH ---
   useEffect(() => {
     if (!document.getElementById('tailwind-cdn')) {
       const script = document.createElement('script');
@@ -152,9 +110,8 @@ export default function App() {
     }
   }, []);
 
-  // --- STATES ---
-  const [currentUserRole, setCurrentUserRole] = useState('Management'); // Management, Warehouse, User
-  const [activeTab, setActiveTab] = useState('dashboard'); // dashboard, inventory, requests, print, directory, stocktake, googleSheet
+  const [currentUserRole, setCurrentUserRole] = useState('Management');
+  const [activeTab, setActiveTab] = useState('dashboard');
   
   const [items, setItems] = useState(INITIAL_ITEMS);
   const [warehouses, setWarehouses] = useState(INITIAL_WAREHOUSES);
@@ -162,7 +119,6 @@ export default function App() {
   const [customers, setCustomers] = useState(INITIAL_CUSTOMERS);
   const [requests, setRequests] = useState(INITIAL_REQUESTS);
 
-  // Email gợi ý lịch sử
   const [pastEmails, setPastEmails] = useState([
     'an.nguyen@company.com',
     'binh.tran@company.com',
@@ -170,29 +126,27 @@ export default function App() {
     'ban-giam-doc@company.com'
   ]);
 
-  // Phiếu xuất/nhập đang được chọn để in
   const [selectedPrintRequest, setSelectedPrintRequest] = useState(INITIAL_REQUESTS[0]);
 
-  // Modal tạo yêu cầu mới
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
   const [newRequestType, setNewRequestType] = useState('EXPORT');
+  const [customVoucherId, setCustomVoucherId] = useState('');
   const [reqRequesterName, setReqRequesterName] = useState('Lê Văn Tuyên');
   const [reqCustomerName, setReqCustomerName] = useState('BIDV CN Thành Công');
   const [reqWarehouse, setReqWarehouse] = useState('WH01');
   const [reqWorkType, setReqWorkType] = useState('REPAIR_SINGLE');
   const [reqReasonType, setReqReasonType] = useState('SERVICE');
-  const [reqContractNo, setReqContractNo] = useState('2607023BG/HH');
-  const [reqPaidAmount, setReqPaidAmount] = useState('');
-  const [reqPaymentDate, setReqPaymentDate] = useState('');
   const [reqNote, setReqNote] = useState('');
   const [reqEmailsInput, setReqEmailsInput] = useState('');
   const [selectedEmailChips, setSelectedEmailChips] = useState(['an.nguyen@company.com']);
   const [reqItemsList, setReqItemsList] = useState([{ itemId: 'CMOS-2500', quantity: 5, serialNotes: '' }]);
 
-  // Lọc và Tìm kiếm
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Modal sửa Nhân viên & Khách hàng
+  const [isItemModalOpen, setIsItemModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
+  const [itemForm, setItemForm] = useState({ id: '', name: '', unit: 'Cái', minThreshold: 10 });
+
   const [isEmployeeModalOpen, setIsEmployeeModalOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState(null);
   const [empForm, setEmpForm] = useState({ id: '', name: '', title: '', email: '', role: 'User' });
@@ -201,15 +155,12 @@ export default function App() {
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [custForm, setCustForm] = useState({ id: '', code: '', fullName: '', contact: '', phone: '', email: '', address: '' });
 
-  // Trạng thái kiểm kê kho
   const [stocktakeWH, setStocktakeWH] = useState('WH01');
   const [stocktakeData, setStocktakeData] = useState({});
 
-  // Cấu hình Google Sheet
   const [gsheetUrl, setGsheetUrl] = useState('https://script.google.com/macros/s/AKfycbx_MOCK_SHEET_ID/exec');
   const [syncStatus, setSyncStatus] = useState('');
 
-  // Thông báo Toast
   const [toastMessage, setToastMessage] = useState('');
 
   const showToast = (msg) => {
@@ -217,7 +168,6 @@ export default function App() {
     setTimeout(() => setToastMessage(''), 3500);
   };
 
-  // --- TÍNH TOÁN DANH SÁCH CHẠM NGƯỠNG ---
   const lowStockItems = useMemo(() => {
     return items.map(item => {
       const totalStock = Object.values(item.stock).reduce((a, b) => a + b, 0);
@@ -229,35 +179,95 @@ export default function App() {
     }).filter(i => i.isLow);
   }, [items]);
 
-  // --- HÀM XUẤT FILE EXCEL / CSV ---
   const handleExportCSV = (dataType) => {
-    let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; // UTF-8 BOM hỗ trợ tiếng Việt
-
+    let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
     if (dataType === 'INVENTORY') {
-      csvContent += "Ma Hang,Ten Hang Hoa,Don Vi,Kho Ha Noi,Kho HCM,Kho Linh Kien,Tong Ton,Nguong An Toan\n";
+      csvContent += "Ma Hang,Ten Hang Hoa,Don Vi,Kho Ha Noi,Kho HCM,Tong Ton,Nguong An Toan\n";
       items.forEach(i => {
         const total = Object.values(i.stock).reduce((a, b) => a + b, 0);
-        csvContent += `"${i.id}","${i.name}","${i.unit}",${i.stock.WH01 || 0},${i.stock.WH02 || 0},${i.stock.WH03 || 0},${total},${i.minThreshold}\n`;
+        csvContent += `"${i.id}","${i.name}","${i.unit}",${i.stock.WH01 || 0},${i.stock.WH02 || 0},${total},${i.minThreshold}\n`;
       });
-    } else if (dataType === 'REQUESTS') {
-      csvContent += "So Phieu,Loai Phieu,Nguoi Yeucau,Khach Hang,Kho,So HD,Ngay,Trang Thai\n";
-      requests.forEach(r => {
-        csvContent += `"${r.id}","${r.type}","${r.requesterName}","${r.customerName}","${r.warehouseId}","${r.contractNo}","${r.date}","${r.status}"\n`;
+    } else if (dataType === 'EMPLOYEES') {
+      csvContent += "Ma NV,Ho va Ten,Chuc Danh,Email,Vai Tro\n";
+      employees.forEach(e => {
+        csvContent += `"${e.id}","${e.name}","${e.title}","${e.email}","${e.role}"\n`;
+      });
+    } else if (dataType === 'CUSTOMERS') {
+      csvContent += "Ma Tat,Ten Day Du,Nguoi Lien He,So Dien Thoai,Email,Dia Chi\n";
+      customers.forEach(c => {
+        csvContent += `"${c.code}","${c.fullName}","${c.contact}","${c.phone}","${c.email}","${c.address}"\n`;
       });
     }
 
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `Bao_Cao_${dataType}_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute("download", `Danh_Sach_${dataType}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-
-    showToast(`Đã tải xuống file báo cáo Excel/CSV thành công!`);
+    showToast(`Đã xuất file dữ liệu ${dataType} thành công!`);
   };
 
-  // --- QUẢN LÝ EMAIL THÔNG BÁO ---
+  const handleImportCSV = (e, dataType) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target.result;
+      const rows = text.split('\n').map(row => row.split(',').map(cell => cell.replace(/^"|"$/g, '').trim()));
+      
+      if (dataType === 'ITEMS' && rows.length > 1) {
+        const newItems = [...items];
+        for (let i = 1; i < rows.length; i++) {
+          const r = rows[i];
+          if (r.length >= 4 && r[0]) {
+            const exists = newItems.find(item => item.id === r[0]);
+            if (!exists) {
+              newItems.push({
+                id: r[0],
+                name: r[1],
+                unit: r[2] || 'Cái',
+                minThreshold: Number(r[3]) || 10,
+                stock: { WH01: 0, WH02: 0 }
+              });
+            }
+          }
+        }
+        setItems(newItems);
+        showToast('Đã nhập thành công danh sách hàng hóa từ file!');
+      } else if (dataType === 'EMPLOYEES' && rows.length > 1) {
+        const newEmps = [...employees];
+        for (let i = 1; i < rows.length; i++) {
+          const r = rows[i];
+          if (r.length >= 4 && r[0]) {
+            const exists = newEmps.find(emp => emp.id === r[0]);
+            if (!exists) {
+              newEmps.push({ id: r[0], name: r[1], title: r[2], email: r[3], role: r[4] || 'User' });
+            }
+          }
+        }
+        setEmployees(newEmps);
+        showToast('Đã nhập thành công danh sách nhân viên từ file!');
+      } else if (dataType === 'CUSTOMERS' && rows.length > 1) {
+        const newCusts = [...customers];
+        for (let i = 1; i < rows.length; i++) {
+          const r = rows[i];
+          if (r.length >= 6 && r[0]) {
+            const exists = newCusts.find(c => c.code === r[0]);
+            if (!exists) {
+              newCusts.push({ id: `KH00${newCusts.length + 1}`, code: r[0], fullName: r[1], contact: r[2], phone: r[3], email: r[4], address: r[5] });
+            }
+          }
+        }
+        setCustomers(newCusts);
+        showToast('Đã nhập thành công danh sách khách hàng từ file!');
+      }
+    };
+    reader.readAsText(file, 'UTF-8');
+  };
+
   const handleAddEmailChip = (email) => {
     if (email && !selectedEmailChips.includes(email)) {
       setSelectedEmailChips([...selectedEmailChips, email]);
@@ -271,7 +281,39 @@ export default function App() {
     setSelectedEmailChips(selectedEmailChips.filter(e => e !== email));
   };
 
-  // --- XỬ LÝ YÊU CẦU VÀ PHÊ DUYỆT ---
+  const handleOpenItemModal = (item = null) => {
+    if (item) {
+      setEditingItem(item);
+      setItemForm({ ...item });
+    } else {
+      setEditingItem(null);
+      setItemForm({ id: `MH00${items.length + 1}`, name: '', unit: 'Cái', minThreshold: 10 });
+    }
+    setIsItemModalOpen(true);
+  };
+
+  const handleSaveItem = (e) => {
+    e.preventDefault();
+    if (editingItem) {
+      setItems(items.map(i => i.id === editingItem.id ? { ...i, ...itemForm } : i));
+      showToast('Đã cập nhật thông tin hàng hóa thành công!');
+    } else {
+      const newItem = {
+        ...itemForm,
+        stock: { WH01: 0, WH02: 0 }
+      };
+      setItems([...items, newItem]);
+      showToast('Đã thêm mặt hàng mới vào danh mục!');
+    }
+    setIsItemModalOpen(false);
+  };
+
+  const handleDeleteItem = (id) => {
+    setItems(items.filter(i => i.id !== id));
+    showToast('Đã xóa mặt hàng khỏi hệ thống!');
+  };
+
+  // --- XỬ LÝ TẠO YÊU CẦU ---
   const handleCreateRequest = (e) => {
     e.preventDefault();
 
@@ -285,18 +327,16 @@ export default function App() {
       };
     });
 
-    const countNumber = requests.length + 1;
+    const finalVoucherId = customVoucherId.trim() || `0${requests.length + 1}/26/XK`;
+
     const newReq = {
-      id: `${countNumber < 10 ? '0' + countNumber : countNumber}/26/XK`,
+      id: finalVoucherId,
       type: newRequestType,
       requesterName: reqRequesterName,
       customerName: reqCustomerName,
       warehouseId: reqWarehouse,
       workType: reqWorkType,
       reasonType: reqReasonType,
-      contractNo: reqContractNo,
-      paidAmount: reqPaidAmount,
-      paymentDate: reqPaymentDate,
       date: new Date().toISOString().split('T')[0],
       status: 'PENDING',
       approvedBy: '',
@@ -307,7 +347,8 @@ export default function App() {
 
     setRequests([newReq, ...requests]);
     setIsRequestModalOpen(false);
-    showToast(`⚡ Đã tạo phiếu ${newReq.id} & gửi email thông báo thành công!`);
+    setCustomVoucherId('');
+    showToast(`⚡ Đã tạo phiếu yêu cầu ${newReq.id} thành công! Chuyển sang In Phiếu & Gửi Email.`);
   };
 
   const handleApproveRequest = (reqId, isApprove) => {
@@ -350,10 +391,26 @@ export default function App() {
     });
 
     setRequests(updatedRequests);
-    showToast(isApprove ? `Đã phê duyệt ${reqId} & trừ tồn kho tức thì!` : `Đã từ chối phiếu ${reqId}`);
+    showToast(isApprove ? `Đã phê duyệt ${reqId} & cập nhật tồn kho!` : `Đã từ chối phiếu ${reqId}`);
   };
 
-  // --- QUẢN LÝ NHÂN VIÊN ---
+  // Hàm mở Gmail Web để gửi thư
+  const handleOpenGmailWeb = (req) => {
+    const emails = (req.recipientEmails || ['an.nguyen@company.com']).join(',');
+    const subject = encodeURIComponent(`[THÔNG BÁO KHO] Phiếu ${req.id} - ${req.customerName}`);
+    const itemsSummary = req.items.map(i => `- ${i.name} (SL: ${i.quantity})`).join('\n');
+    const body = encodeURIComponent(
+      `Kính gửi bộ phận liên quan,\n\n` +
+      `Thông tin phiếu ${req.type === 'IMPORT' ? 'Nhập kho' : 'Xuất kho'} số: ${req.id}\n` +
+      `- Khách hàng / Nhà cung cấp: ${req.customerName}\n` +
+      `- Người yêu cầu: ${req.requesterName}\n` +
+      `- Danh sách vật tư:\n${itemsSummary}\n\n` +
+      `Trân trọng,\nHệ thống Quản lý Kho`
+    );
+    const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${emails}&su=${subject}&body=${body}`;
+    window.open(gmailUrl, '_blank');
+  };
+
   const handleOpenEmpModal = (emp = null) => {
     if (emp) {
       setEditingEmployee(emp);
@@ -382,7 +439,6 @@ export default function App() {
     showToast('Đã xóa nhân viên!');
   };
 
-  // --- QUẢN LÝ KHÁCH HÀNG ---
   const handleOpenCustModal = (cust = null) => {
     if (cust) {
       setEditingCustomer(cust);
@@ -411,7 +467,6 @@ export default function App() {
     showToast('Đã xóa khách hàng!');
   };
 
-  // --- KIỂM KÊ VÀ ĐỒNG BỘ SHEETS ---
   const handleStocktakeSave = (itemId, whId, actualQty) => {
     setItems(prev => prev.map(item => {
       if (item.id === itemId) {
@@ -456,13 +511,11 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-4">
-            {/* Đèn báo trạng thái trực tuyến */}
             <div className="hidden sm:flex items-center gap-2 bg-emerald-950 text-emerald-400 border border-emerald-800 px-2.5 py-1 rounded-full text-xs font-mono">
               <Radio className="w-3.5 h-3.5 animate-pulse text-emerald-400" />
               <span>Realtime Online</span>
             </div>
 
-            {/* Chọn vai trò người dùng */}
             <div className="flex items-center gap-2 bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700">
               <Shield className="w-4 h-4 text-amber-400" />
               <span className="text-xs text-slate-300 font-medium hidden md:inline">Vai trò:</span>
@@ -502,6 +555,15 @@ export default function App() {
           </button>
 
           <button
+            onClick={() => setActiveTab('itemsDir')}
+            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-t-lg transition-colors whitespace-nowrap ${
+              activeTab === 'itemsDir' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <Package className="w-4 h-4" /> Quản lý Hàng hóa
+          </button>
+
+          <button
             onClick={() => setActiveTab('requests')}
             className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-t-lg transition-colors whitespace-nowrap relative ${
               activeTab === 'requests' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'
@@ -521,7 +583,7 @@ export default function App() {
               activeTab === 'print' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'
             }`}
           >
-            <Printer className="w-4 h-4" /> In Phiếu Chuẩn
+            <Printer className="w-4 h-4" /> In Phiếu Chuẩn & Gửi Email
           </button>
 
           <button
@@ -612,7 +674,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* Cảnh báo tồn kho chạm ngưỡng */}
             {lowStockItems.length > 0 && (
               <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-xl shadow-sm flex items-start justify-between">
                 <div className="flex items-center gap-3">
@@ -633,7 +694,6 @@ export default function App() {
               </div>
             )}
 
-            {/* Biểu đồ thanh trực quan tồn kho */}
             <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
@@ -761,6 +821,74 @@ export default function App() {
           </div>
         )}
 
+        {/* ================= TAB 3.5: ITEMS MANAGEMENT ================= */}
+        {activeTab === 'itemsDir' && (
+          <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                  <Package className="w-5 h-5 text-indigo-600" /> QUẢN LÝ DANH MỤC HÀNG HÓA / VẬT TƯ
+                </h3>
+                <p className="text-xs text-slate-500">Thêm mới, sửa, xóa, xuất/nhập file dữ liệu hàng hóa hàng loạt.</p>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg font-bold text-sm shadow cursor-pointer transition">
+                  <Upload className="w-4 h-4" /> Nhập file Hàng hóa
+                  <input type="file" accept=".csv" onChange={(e) => handleImportCSV(e, 'ITEMS')} className="hidden" />
+                </label>
+
+                <button
+                  onClick={() => handleOpenItemModal()}
+                  className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-bold text-sm shadow transition"
+                >
+                  <Plus className="w-4 h-4" /> Thêm Mặt Hàng Mới
+                </button>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-sm">
+                <thead>
+                  <tr className="bg-slate-100 text-slate-700 font-semibold border-b border-slate-200">
+                    <th className="py-3 px-4">Mã Hàng (Part No)</th>
+                    <th className="py-3 px-4">Tên Hàng Hóa</th>
+                    <th className="py-3 px-4">Đơn Vị Tính</th>
+                    <th className="py-3 px-4 text-center">Ngưỡng Báo Nhập</th>
+                    <th className="py-3 px-4 text-right">Thao Tác</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200">
+                  {items.map(item => (
+                    <tr key={item.id} className="hover:bg-slate-50">
+                      <td className="py-3 px-4 font-mono font-bold text-indigo-600">{item.id}</td>
+                      <td className="py-3 px-4 font-medium text-slate-800">{item.name}</td>
+                      <td className="py-3 px-4 text-slate-600">{item.unit}</td>
+                      <td className="py-3 px-4 text-center font-semibold text-slate-500">{item.minThreshold}</td>
+                      <td className="py-3 px-4 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => handleOpenItemModal(item)}
+                            className="p-1.5 text-slate-600 hover:text-indigo-600 bg-slate-100 rounded"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteItem(item.id)}
+                            className="p-1.5 text-slate-600 hover:text-red-600 bg-slate-100 rounded"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
         {/* ================= TAB 3: WORKFLOW & APPROVALS ================= */}
         {activeTab === 'requests' && (
           <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
@@ -777,13 +905,6 @@ export default function App() {
 
               <div className="flex items-center gap-3">
                 <button
-                  onClick={() => handleExportCSV('REQUESTS')}
-                  className="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold border border-slate-300"
-                >
-                  <Download className="w-3.5 h-3.5" /> Xuất Excel Phiếu
-                </button>
-
-                <button
                   onClick={() => setIsRequestModalOpen(true)}
                   className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-bold text-sm shadow transition"
                 >
@@ -797,10 +918,10 @@ export default function App() {
                 <thead>
                   <tr className="bg-slate-100 text-slate-700 font-semibold border-b border-slate-200">
                     <th className="py-3 px-4">Số Phiếu</th>
+                    <th className="py-3 px-4">Loại Phiếu</th>
                     <th className="py-3 px-4">Người Yêu Cầu</th>
-                    <th className="py-3 px-4">Khách Hàng</th>
-                    <th className="py-3 px-4">Kho Xuất/Nhập</th>
-                    <th className="py-3 px-4">Số HD/Báo Giá</th>
+                    <th className="py-3 px-4">Khách Hàng / Đối Tác</th>
+                    <th className="py-3 px-4">Kho</th>
                     <th className="py-3 px-4">Ngày Tạo</th>
                     <th className="py-3 px-4 text-center">Trạng Thái</th>
                     <th className="py-3 px-4 text-right">Thao Tác</th>
@@ -812,10 +933,12 @@ export default function App() {
                     return (
                       <tr key={req.id} className="hover:bg-slate-50">
                         <td className="py-3 px-4 font-mono font-bold text-indigo-600">{req.id}</td>
+                        <td className="py-3 px-4 font-semibold">
+                          {req.type === 'IMPORT' ? <span className="text-emerald-600">Phiếu Nhập</span> : <span className="text-blue-600">Phiếu Xuất</span>}
+                        </td>
                         <td className="py-3 px-4 font-medium text-slate-800">{req.requesterName}</td>
                         <td className="py-3 px-4 text-slate-700">{req.customerName}</td>
                         <td className="py-3 px-4 text-slate-600">{wh?.name}</td>
-                        <td className="py-3 px-4 font-mono text-xs">{req.contractNo || 'N/A'}</td>
                         <td className="py-3 px-4 text-slate-500 text-xs">{req.date}</td>
                         <td className="py-3 px-4 text-center">
                           {req.status === 'PENDING' && (
@@ -861,7 +984,7 @@ export default function App() {
                                 }}
                                 className="flex items-center gap-1 px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded text-xs font-semibold border border-indigo-200"
                               >
-                                <Printer className="w-3.5 h-3.5" /> In Phiếu Mẫu
+                                <Printer className="w-3.5 h-3.5" /> In Phiếu & Gửi Email
                               </button>
                             )}
                           </div>
@@ -875,12 +998,12 @@ export default function App() {
           </div>
         )}
 
-        {/* ================= TAB 4: PRINTABLE VOUCHER ================= */}
+        {/* ================= TAB 4: PRINTABLE VOUCHER & GMAIL WEB INTEGRATION ================= */}
         {activeTab === 'print' && selectedPrintRequest && (
           <div className="space-y-6">
             <div className="flex items-center justify-between bg-white p-4 rounded-xl border border-slate-200 shadow-sm print:hidden">
               <div className="flex items-center gap-3">
-                <label className="text-sm font-semibold text-slate-700">Chọn Phiếu Cần In:</label>
+                <label className="text-sm font-semibold text-slate-700">Chọn Phiếu Cần In / Gửi Mail:</label>
                 <select
                   value={selectedPrintRequest.id}
                   onChange={(e) => {
@@ -889,29 +1012,36 @@ export default function App() {
                   }}
                   className="border border-slate-300 rounded-lg px-3 py-1.5 text-sm font-bold"
                 >
-                  {requests.filter(r => r.status === 'APPROVED').map(r => (
+                  {requests.map(r => (
                     <option key={r.id} value={r.id}>
-                      Phiếu số {r.id} - {r.customerName} ({r.date})
+                      Phiếu số {r.id} - {r.customerName} ({r.date}) [{r.status}]
                     </option>
                   ))}
                 </select>
               </div>
 
-              <button
-                onClick={() => window.print()}
-                className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-lg font-bold text-sm shadow transition"
-              >
-                <Printer className="w-4 h-4" /> IN PHIẾU NÀY (A4)
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => handleOpenGmailWeb(selectedPrintRequest)}
+                  className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg font-bold text-sm shadow transition"
+                >
+                  <Mail className="w-4 h-4" /> Gửi Email qua Gmail Web
+                </button>
+
+                <button
+                  onClick={() => window.print()}
+                  className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-bold text-sm shadow transition"
+                >
+                  <Printer className="w-4 h-4" /> IN PHIẾU NÀY (A4)
+                </button>
+              </div>
             </div>
 
-            {/* Khung in phiếu chuẩn A4 */}
-            <div className="bg-white p-10 rounded-xl border border-slate-300 shadow-md max-w-4xl mx-auto text-slate-900 font-serif print:shadow-none print:border-none print:p-0">
+            <div className="bg-white p-10 rounded-xl border border-slate-300 shadow-md max-w-4xl mx-auto text-slate-900 font-sans print:shadow-none print:border-none print:p-0">
               
-              {/* Tiêu đề thông tư */}
               <div className="flex justify-between items-start mb-4">
                 <div></div>
-                <div className="text-right text-xs italic">
+                <div className="text-right text-xs italic leading-relaxed">
                   <p className="font-bold not-italic">
                     {selectedPrintRequest.type === 'IMPORT' ? 'Mẫu số 01 – VT' : 'Mẫu số 02 – VT'}
                   </p>
@@ -920,12 +1050,11 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Tên phiếu & Số */}
               <div className="text-center mb-6">
                 <p className="text-sm italic font-semibold mb-1">
                   Ngày {selectedPrintRequest.date.split('-')[2]} tháng {selectedPrintRequest.date.split('-')[1]} năm {selectedPrintRequest.date.split('-')[0]}
                 </p>
-                <h2 className="text-xl font-bold uppercase tracking-wide">
+                <h2 className="text-2xl font-bold uppercase">
                   {selectedPrintRequest.type === 'IMPORT' ? 'PHIẾU NHẬP KHO' : 'PHIẾU XUẤT KHO'}
                 </h2>
                 <p className="text-sm font-semibold italic mt-1">
@@ -933,104 +1062,94 @@ export default function App() {
                 </p>
               </div>
 
-              {/* Chi tiết nội dung phiếu */}
-              <div className="text-sm space-y-2 mb-6">
-                <p>
-                  <span className="font-bold">1. Họ và tên người yêu cầu :</span> {selectedPrintRequest.requesterName}
-                </p>
-                <p>
-                  <span className="font-bold">2. Tên khách hàng :</span> {selectedPrintRequest.customerName}
-                </p>
+              <div className="text-sm space-y-2.5 mb-6 leading-relaxed">
+                {selectedPrintRequest.type === 'IMPORT' ? (
+                  <>
+                    <p><span className="font-bold">1. Họ và tên người giao hàng :</span> {selectedPrintRequest.requesterName}</p>
+                    <p><span className="font-bold">2. Đơn vị / Nhà cung cấp :</span> {selectedPrintRequest.customerName}</p>
+                  </>
+                ) : (
+                  <>
+                    <p><span className="font-bold">1. Họ và tên người yêu cầu :</span> {selectedPrintRequest.requesterName}</p>
+                    <p><span className="font-bold">2. Tên khách hàng :</span> {selectedPrintRequest.customerName}</p>
+                  </>
+                )}
 
-                {/* Các kho tích chọn */}
                 <div className="flex items-center gap-6">
-                  <span className="font-bold">3. Xuất tại kho:</span>
-                  <label className="flex items-center gap-1.5 cursor-pointer">
-                    <input type="checkbox" checked={selectedPrintRequest.warehouseId === 'WH01'} readOnly className="w-4 h-4" />
+                  <span className="font-bold">3. Thực hiện tại kho:</span>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={selectedPrintRequest.warehouseId === 'WH01'} readOnly className="w-4 h-4 accent-indigo-600" />
                     <span>Hà Nội</span>
                   </label>
-                  <label className="flex items-center gap-1.5 cursor-pointer">
-                    <input type="checkbox" checked={selectedPrintRequest.warehouseId === 'WH02'} readOnly className="w-4 h-4" />
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={selectedPrintRequest.warehouseId === 'WH02'} readOnly className="w-4 h-4 accent-indigo-600" />
                     <span>Hồ Chí Minh</span>
                   </label>
-                  <label className="flex items-center gap-1.5 cursor-pointer">
-                    <input type="checkbox" checked={selectedPrintRequest.warehouseId === 'WH03'} readOnly className="w-4 h-4" />
-                    <span>Kho Linh Kiện / Khác</span>
-                  </label>
                 </div>
 
-                {/* Tùy chọn sửa chữa / bán máy */}
-                <div className="space-y-1">
-                  <span className="font-bold">4. Sửa chữa/ Bán máy:</span>
-                  <div className="grid grid-cols-2 gap-2 pl-4">
-                    <label className="flex items-center gap-2">
-                      <input type="checkbox" checked={selectedPrintRequest.workType === 'REPAIR_SINGLE'} readOnly className="w-4 h-4" />
-                      <span>Sửa chữa lẻ</span>
-                    </label>
-                    <label className="flex items-center gap-2">
-                      <input type="checkbox" checked={selectedPrintRequest.workType === 'REPAIR_PROJ'} readOnly className="w-4 h-4" />
-                      <span>Sửa chữa dự án</span>
-                    </label>
-                    <label className="flex items-center gap-2">
-                      <input type="checkbox" checked={selectedPrintRequest.workType === 'SELL_SINGLE'} readOnly className="w-4 h-4" />
-                      <span>Bán máy lẻ</span>
-                    </label>
-                    <label className="flex items-center gap-2">
-                      <input type="checkbox" checked={selectedPrintRequest.workType === 'SELL_PROJ'} readOnly className="w-4 h-4" />
-                      <span>Bán máy dự án</span>
-                    </label>
-                  </div>
-                </div>
+                {selectedPrintRequest.type !== 'IMPORT' && (
+                  <>
+                    <div className="space-y-1.5">
+                      <span className="font-bold">4. Sửa chữa/ Bán máy:</span>
+                      <div className="grid grid-cols-2 gap-2.5 pl-6">
+                        <label className="flex items-center gap-2">
+                          <input type="checkbox" checked={selectedPrintRequest.workType === 'REPAIR_SINGLE'} readOnly className="w-4 h-4 accent-indigo-600" />
+                          <span>Sửa chữa lẻ</span>
+                        </label>
+                        <label className="flex items-center gap-2">
+                          <input type="checkbox" checked={selectedPrintRequest.workType === 'REPAIR_PROJ'} readOnly className="w-4 h-4 accent-indigo-600" />
+                          <span>Sửa chữa dự án</span>
+                        </label>
+                        <label className="flex items-center gap-2">
+                          <input type="checkbox" checked={selectedPrintRequest.workType === 'SELL_SINGLE'} readOnly className="w-4 h-4 accent-indigo-600" />
+                          <span>Bán máy lẻ</span>
+                        </label>
+                        <label className="flex items-center gap-2">
+                          <input type="checkbox" checked={selectedPrintRequest.workType === 'SELL_PROJ'} readOnly className="w-4 h-4 accent-indigo-600" />
+                          <span>Bán máy dự án</span>
+                        </label>
+                      </div>
+                    </div>
 
-                {/* Tùy chọn lý do */}
-                <div className="flex items-center gap-6">
-                  <span className="font-bold">5. Lý do xuất kho:</span>
-                  <label className="flex items-center gap-1.5">
-                    <input type="checkbox" checked={selectedPrintRequest.reasonType === 'SERVICE'} readOnly className="w-4 h-4" />
-                    <span>Dịch vụ</span>
-                  </label>
-                  <label className="flex items-center gap-1.5">
-                    <input type="checkbox" checked={selectedPrintRequest.reasonType === 'WARRANTY'} readOnly className="w-4 h-4" />
-                    <span>Bảo hành</span>
-                  </label>
-                  <label className="flex items-center gap-1.5">
-                    <input type="checkbox" checked={selectedPrintRequest.reasonType === 'INTERNAL'} readOnly className="w-4 h-4" />
-                    <span>Nội bộ</span>
-                  </label>
-                </div>
-
-                <p>
-                  <span className="font-bold">6. Số Hợp đồng/ Báo giá :</span> {selectedPrintRequest.contractNo || '.........................................................'}
-                </p>
-
-                <p>
-                  <span className="font-bold">7. Số tiền (nếu đã thanh toán):</span> {selectedPrintRequest.paidAmount || '.........................................................'}
-                  <span className="font-bold ml-6">Ngày thanh toán:</span> {selectedPrintRequest.paymentDate || '...................................'}
-                </p>
+                    <div className="flex items-center gap-6">
+                      <span className="font-bold">5. Lý do xuất kho:</span>
+                      <label className="flex items-center gap-2">
+                        <input type="checkbox" checked={selectedPrintRequest.reasonType === 'SERVICE'} readOnly className="w-4 h-4 accent-indigo-600" />
+                        <span>Dịch vụ</span>
+                      </label>
+                      <label className="flex items-center gap-2">
+                        <input type="checkbox" checked={selectedPrintRequest.reasonType === 'WARRANTY'} readOnly className="w-4 h-4 accent-indigo-600" />
+                        <span>Bảo hành</span>
+                      </label>
+                      <label className="flex items-center gap-2">
+                        <input type="checkbox" checked={selectedPrintRequest.reasonType === 'INTERNAL'} readOnly className="w-4 h-4 accent-indigo-600" />
+                        <span>Nội bộ</span>
+                      </label>
+                    </div>
+                  </>
+                )}
               </div>
 
-              {/* Bảng vật tư xuất nhập */}
               <table className="w-full text-sm border-collapse border border-slate-900 mb-6">
                 <thead>
                   <tr className="bg-slate-100 text-center font-bold">
                     <th className="border border-slate-900 p-2 w-12">STT</th>
                     <th className="border border-slate-900 p-2">TÊN HÀNG HÓA</th>
                     <th className="border border-slate-900 p-2">PART NO</th>
-                    <th className="border border-slate-900 p-2 w-24">SỐ LƯỢNG</th>
+                    <th className="border border-slate-900 p-2 w-28">SỐ LƯỢNG</th>
                     <th className="border border-slate-900 p-2">GHI CHÚ – SERIAL</th>
                   </tr>
                 </thead>
                 <tbody>
                   {selectedPrintRequest.items.map((it, idx) => (
                     <tr key={idx} className="text-center">
-                      <td className="border border-slate-900 p-2">{idx + 1}</td>
-                      <td className="border border-slate-900 p-2 text-left font-semibold">{it.name}</td>
-                      <td className="border border-slate-900 p-2 font-mono">{it.itemId}</td>
-                      <td className="border border-slate-900 p-2 font-bold">{it.quantity}</td>
-                      <td className="border border-slate-900 p-2 text-left text-xs">{it.serialNotes}</td>
+                      <td className="border border-slate-900 p-2.5">{idx + 1}</td>
+                      <td className="border border-slate-900 p-2.5 text-left font-semibold">{it.name}</td>
+                      <td className="border border-slate-900 p-2.5 font-mono">{it.itemId}</td>
+                      <td className="border border-slate-900 p-2.5 font-bold">{it.quantity}</td>
+                      <td className="border border-slate-900 p-2.5 text-left text-xs">{it.serialNotes}</td>
                     </tr>
                   ))}
-                  {/* Hàng tổng cộng */}
                   <tr className="font-bold text-center">
                     <td colSpan={3} className="border border-slate-900 p-2">Cộng</td>
                     <td className="border border-slate-900 p-2">
@@ -1041,10 +1160,9 @@ export default function App() {
                 </tbody>
               </table>
 
-              {/* Chữ ký các bên */}
               <div className="grid grid-cols-3 text-center text-xs gap-4 pt-4">
                 <div>
-                  <p className="font-bold">Người lập phiếu</p>
+                  <p className="font-bold">{selectedPrintRequest.type === 'IMPORT' ? 'Người giao hàng' : 'Người lập phiếu'}</p>
                   <p className="italic text-slate-500">(Ký, họ tên)</p>
                   <div className="h-16"></div>
                   <p className="font-semibold">{selectedPrintRequest.requesterName}</p>
@@ -1056,7 +1174,7 @@ export default function App() {
                   <p className="font-semibold">Trần Thị Bình</p>
                 </div>
                 <div>
-                  <p className="font-bold">Người nhận hàng / Quản lý</p>
+                  <p className="font-bold">Kế toán / Quản lý</p>
                   <p className="italic text-slate-500">(Ký, họ tên)</p>
                   <div className="h-16"></div>
                   <p className="font-semibold">{selectedPrintRequest.approvedBy || 'Nguyễn Văn An'}</p>
@@ -1070,18 +1188,30 @@ export default function App() {
         {/* ================= TAB 5: EMPLOYEES & CUSTOMERS MANAGEMENT ================= */}
         {activeTab === 'directory' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Quản lý Nhân viên */}
+            {/* Nhân viên */}
             <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
                   <UserCheck className="w-5 h-5 text-indigo-600" /> QUẢN LÝ NHÂN VIÊN
                 </h3>
-                <button
-                  onClick={() => handleOpenEmpModal()}
-                  className="flex items-center gap-1 bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold"
-                >
-                  <Plus className="w-3.5 h-3.5" /> Thêm Nhân Viên
-                </button>
+                <div className="flex items-center gap-2">
+                  <label className="flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1.5 rounded text-xs font-bold cursor-pointer">
+                    <Upload className="w-3.5 h-3.5" /> Nhập NV
+                    <input type="file" accept=".csv" onChange={(e) => handleImportCSV(e, 'EMPLOYEES')} className="hidden" />
+                  </label>
+                  <button
+                    onClick={() => handleExportCSV('EMPLOYEES')}
+                    className="flex items-center gap-1 bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1.5 rounded text-xs font-bold border border-slate-300"
+                  >
+                    <Download className="w-3.5 h-3.5" /> Xuất NV
+                  </button>
+                  <button
+                    onClick={() => handleOpenEmpModal()}
+                    className="flex items-center gap-1 bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded text-xs font-bold"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> Thêm
+                  </button>
+                </div>
               </div>
 
               <div className="overflow-x-auto">
@@ -1104,16 +1234,10 @@ export default function App() {
                         <td className="py-2.5 px-3 text-slate-500 font-mono">{emp.email}</td>
                         <td className="py-2.5 px-3 text-right">
                           <div className="flex items-center justify-end gap-1">
-                            <button
-                              onClick={() => handleOpenEmpModal(emp)}
-                              className="p-1 text-slate-600 hover:text-indigo-600"
-                            >
+                            <button onClick={() => handleOpenEmpModal(emp)} className="p-1 text-slate-600 hover:text-indigo-600">
                               <Edit className="w-3.5 h-3.5" />
                             </button>
-                            <button
-                              onClick={() => handleDeleteEmployee(emp.id)}
-                              className="p-1 text-slate-600 hover:text-red-600"
-                            >
+                            <button onClick={() => handleDeleteEmployee(emp.id)} className="p-1 text-slate-600 hover:text-red-600">
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
                           </div>
@@ -1125,18 +1249,30 @@ export default function App() {
               </div>
             </div>
 
-            {/* Quản lý Khách hàng */}
+            {/* Khách hàng */}
             <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
                   <Briefcase className="w-5 h-5 text-indigo-600" /> QUẢN LÝ KHÁCH HÀNG
                 </h3>
-                <button
-                  onClick={() => handleOpenCustModal()}
-                  className="flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold"
-                >
-                  <Plus className="w-3.5 h-3.5" /> Thêm Khách Hàng
-                </button>
+                <div className="flex items-center gap-2">
+                  <label className="flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1.5 rounded text-xs font-bold cursor-pointer">
+                    <Upload className="w-3.5 h-3.5" /> Nhập KH
+                    <input type="file" accept=".csv" onChange={(e) => handleImportCSV(e, 'CUSTOMERS')} className="hidden" />
+                  </label>
+                  <button
+                    onClick={() => handleExportCSV('CUSTOMERS')}
+                    className="flex items-center gap-1 bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1.5 rounded text-xs font-bold border border-slate-300"
+                  >
+                    <Download className="w-3.5 h-3.5" /> Xuất KH
+                  </button>
+                  <button
+                    onClick={() => handleOpenCustModal()}
+                    className="flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded text-xs font-bold"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> Thêm
+                  </button>
+                </div>
               </div>
 
               <div className="overflow-x-auto">
@@ -1161,16 +1297,10 @@ export default function App() {
                         </td>
                         <td className="py-2.5 px-3 text-right">
                           <div className="flex items-center justify-end gap-1">
-                            <button
-                              onClick={() => handleOpenCustModal(c)}
-                              className="p-1 text-slate-600 hover:text-indigo-600"
-                            >
+                            <button onClick={() => handleOpenCustModal(c)} className="p-1 text-slate-600 hover:text-indigo-600">
                               <Edit className="w-3.5 h-3.5" />
                             </button>
-                            <button
-                              onClick={() => handleDeleteCustomer(c.id)}
-                              className="p-1 text-slate-600 hover:text-red-600"
-                            >
+                            <button onClick={() => handleDeleteCustomer(c.id)} className="p-1 text-slate-600 hover:text-red-600">
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
                           </div>
@@ -1306,7 +1436,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* Khung hiển thị mã Google Apps Script */}
             <div className="bg-slate-900 text-slate-200 p-6 rounded-xl border border-slate-800 shadow-lg space-y-3">
               <div className="flex items-center justify-between border-b border-slate-800 pb-3">
                 <div className="flex items-center gap-2">
@@ -1356,6 +1485,19 @@ export default function App() {
                 </div>
 
                 <div>
+                  <label className="block font-bold text-slate-700 mb-1">Số Phiếu (Điền tay):</label>
+                  <input
+                    type="text"
+                    value={customVoucherId}
+                    onChange={(e) => setCustomVoucherId(e.target.value)}
+                    placeholder="VD: 03/26/XK hoặc để trống tự sinh"
+                    className="w-full border border-slate-300 rounded-lg p-2 font-mono font-bold"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
                   <label className="block font-bold text-slate-700 mb-1">Kho Thực Hiện:</label>
                   <select
                     value={reqWarehouse}
@@ -1367,11 +1509,11 @@ export default function App() {
                     ))}
                   </select>
                 </div>
-              </div>
 
-              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Họ và tên người yêu cầu:</label>
+                  <label className="block font-bold text-slate-700 mb-1">
+                    {newRequestType === 'IMPORT' ? 'Họ và tên người giao hàng:' : 'Họ và tên người yêu cầu:'}
+                  </label>
                   <select
                     value={reqRequesterName}
                     onChange={(e) => setReqRequesterName(e.target.value)}
@@ -1382,138 +1524,115 @@ export default function App() {
                     ))}
                   </select>
                 </div>
-
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">Tên Khách Hàng:</label>
-                  <select
-                    value={reqCustomerName}
-                    onChange={(e) => setReqCustomerName(e.target.value)}
-                    className="w-full border border-slate-300 rounded-lg p-2 font-semibold"
-                  >
-                    {customers.map(c => (
-                      <option key={c.id} value={c.fullName}>{c.code} - {c.fullName}</option>
-                    ))}
-                  </select>
-                </div>
               </div>
 
-              {/* Phân loại công việc và lý do xuất kho */}
-              <div className="grid grid-cols-2 gap-4 bg-slate-50 p-3 rounded-lg border border-slate-200">
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">Phân loại Sửa chữa/ Bán máy:</label>
-                  <select
-                    value={reqWorkType}
-                    onChange={(e) => setReqWorkType(e.target.value)}
-                    className="w-full border border-slate-300 rounded p-1.5 font-semibold"
-                  >
-                    <option value="REPAIR_SINGLE">Sửa chữa lẻ</option>
-                    <option value="REPAIR_PROJ">Sửa chữa dự án</option>
-                    <option value="SELL_SINGLE">Bán máy lẻ</option>
-                    <option value="SELL_PROJ">Bán máy dự án</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">Lý do xuất kho:</label>
-                  <select
-                    value={reqReasonType}
-                    onChange={(e) => setReqReasonType(e.target.value)}
-                    className="w-full border border-slate-300 rounded p-1.5 font-semibold"
-                  >
-                    <option value="SERVICE">Dịch vụ</option>
-                    <option value="WARRANTY">Bảo hành</option>
-                    <option value="INTERNAL">Nội bộ</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">Số Hợp đồng/ Báo giá:</label>
-                  <input
-                    type="text"
-                    value={reqContractNo}
-                    onChange={(e) => setReqContractNo(e.target.value)}
-                    placeholder="VD: 2607023BG/HH"
-                    className="w-full border border-slate-300 rounded p-1.5 font-mono"
-                  />
-                </div>
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">Số tiền thanh toán:</label>
-                  <input
-                    type="text"
-                    value={reqPaidAmount}
-                    onChange={(e) => setReqPaidAmount(e.target.value)}
-                    placeholder="VD: 15.000.000 VNĐ"
-                    className="w-full border border-slate-300 rounded p-1.5"
-                  />
-                </div>
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">Ngày thanh toán:</label>
-                  <input
-                    type="date"
-                    value={reqPaymentDate}
-                    onChange={(e) => setReqPaymentDate(e.target.value)}
-                    className="w-full border border-slate-300 rounded p-1.5"
-                  />
-                </div>
-              </div>
-
-              {/* Danh sách vật tư */}
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Danh Sách Vật Tư / Hàng Hóa:</label>
-                {reqItemsList.map((ri, index) => (
-                  <div key={index} className="flex items-center gap-2 mb-2">
+                <label className="block font-bold text-slate-700 mb-1">
+                  {newRequestType === 'IMPORT' ? 'Đơn vị / Nhà cung cấp (Tên nguồn giao):' : 'Tên khách hàng:'}
+                </label>
+                <select
+                  value={reqCustomerName}
+                  onChange={(e) => setReqCustomerName(e.target.value)}
+                  className="w-full border border-slate-300 rounded-lg p-2 font-semibold"
+                >
+                  {customers.map(c => (
+                    <option key={c.id} value={c.fullName}>{c.code} - {c.fullName}</option>
+                  ))}
+                </select>
+              </div>
+
+              {newRequestType !== 'IMPORT' && (
+                <div className="grid grid-cols-2 gap-4 bg-slate-50 p-3 rounded-lg border border-slate-200">
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Phân loại Sửa chữa/ Bán máy:</label>
                     <select
-                      value={ri.itemId}
-                      onChange={(e) => {
-                        const newList = [...reqItemsList];
-                        newList[index].itemId = e.target.value;
-                        setReqItemsList(newList);
-                      }}
-                      className="w-1/2 border border-slate-300 rounded p-1.5 font-semibold"
+                      value={reqWorkType}
+                      onChange={(e) => setReqWorkType(e.target.value)}
+                      className="w-full border border-slate-300 rounded p-1.5 font-semibold"
                     >
-                      {items.map(i => (
-                        <option key={i.id} value={i.id}>{i.id} - {i.name}</option>
-                      ))}
+                      <option value="REPAIR_SINGLE">Sửa chữa lẻ</option>
+                      <option value="REPAIR_PROJ">Sửa chữa dự án</option>
+                      <option value="SELL_SINGLE">Bán máy lẻ</option>
+                      <option value="SELL_PROJ">Bán máy dự án</option>
                     </select>
-
-                    <input
-                      type="number"
-                      min="1"
-                      placeholder="SL"
-                      value={ri.quantity}
-                      onChange={(e) => {
-                        const newList = [...reqItemsList];
-                        newList[index].quantity = e.target.value;
-                        setReqItemsList(newList);
-                      }}
-                      className="w-16 border border-slate-300 rounded p-1.5 text-center font-bold"
-                    />
-
-                    <input
-                      type="text"
-                      placeholder="Ghi chú / Serial..."
-                      value={ri.serialNotes}
-                      onChange={(e) => {
-                        const newList = [...reqItemsList];
-                        newList[index].serialNotes = e.target.value;
-                        setReqItemsList(newList);
-                      }}
-                      className="flex-grow border border-slate-300 rounded p-1.5"
-                    />
-
-                    {reqItemsList.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => setReqItemsList(reqItemsList.filter((_, idx) => idx !== index))}
-                        className="p-1.5 text-red-600 hover:bg-red-50 rounded"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    )}
                   </div>
-                ))}
+
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Lý do xuất kho:</label>
+                    <select
+                      value={reqReasonType}
+                      onChange={(e) => setReqReasonType(e.target.value)}
+                      className="w-full border border-slate-300 rounded p-1.5 font-semibold"
+                    >
+                      <option value="SERVICE">Dịch vụ</option>
+                      <option value="WARRANTY">Bảo hành</option>
+                      <option value="INTERNAL">Nội bộ</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Danh Sách Vật Tư / Hàng Hóa (Hiển thị số lượng tồn):</label>
+                {reqItemsList.map((ri, index) => {
+                  return (
+                    <div key={index} className="flex items-center gap-2 mb-2">
+                      <select
+                        value={ri.itemId}
+                        onChange={(e) => {
+                          const newList = [...reqItemsList];
+                          newList[index].itemId = e.target.value;
+                          setReqItemsList(newList);
+                        }}
+                        className="w-1/2 border border-slate-300 rounded p-1.5 font-semibold"
+                      >
+                        {items.map(i => {
+                          const stockSum = Object.values(i.stock).reduce((a, b) => a + b, 0);
+                          return (
+                            <option key={i.id} value={i.id}>
+                              {i.id} - {i.name} [Tồn: {stockSum} {i.unit}]
+                            </option>
+                          );
+                        })}
+                      </select>
+
+                      <input
+                        type="number"
+                        min="1"
+                        placeholder="SL"
+                        value={ri.quantity}
+                        onChange={(e) => {
+                          const newList = [...reqItemsList];
+                          newList[index].quantity = e.target.value;
+                          setReqItemsList(newList);
+                        }}
+                        className="w-16 border border-slate-300 rounded p-1.5 text-center font-bold"
+                      />
+
+                      <input
+                        type="text"
+                        placeholder="Ghi chú / Serial..."
+                        value={ri.serialNotes}
+                        onChange={(e) => {
+                          const newList = [...reqItemsList];
+                          newList[index].serialNotes = e.target.value;
+                          setReqItemsList(newList);
+                        }}
+                        className="flex-grow border border-slate-300 rounded p-1.5"
+                      />
+
+                      {reqItemsList.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => setReqItemsList(reqItemsList.filter((_, idx) => idx !== index))}
+                          className="p-1.5 text-red-600 hover:bg-red-50 rounded"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
 
                 <button
                   type="button"
@@ -1524,7 +1643,6 @@ export default function App() {
                 </button>
               </div>
 
-              {/* Danh sách Email gửi thông báo */}
               <div>
                 <label className="block font-bold text-slate-700 mb-1">Email Thông Báo (Chọn hoặc nhập email mới):</label>
                 <div className="flex flex-wrap gap-1.5 mb-2">
@@ -1585,7 +1703,91 @@ export default function App() {
                   type="submit"
                   className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold shadow"
                 >
-                  GỬI YÊU CẦU & THÔNG BÁO EMAIL
+                  GỬI YÊU CẦU & CHUYỂN ĐẾN IN PHIẾU
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: ADD/EDIT ITEM ================= */}
+      {isItemModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-200">
+              <h3 className="text-base font-bold text-slate-800">
+                {editingItem ? 'CHỈNH SỬA THÔNG TIN HÀNG HÓA' : 'THÊM MẶT HÀNG / VẬT TƯ MỚI'}
+              </h3>
+              <button onClick={() => setIsItemModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveItem} className="space-y-3 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Mã Hàng (Part No):</label>
+                <input
+                  type="text"
+                  required
+                  value={itemForm.id}
+                  onChange={e => setItemForm({ ...itemForm, id: e.target.value })}
+                  placeholder="VD: CMOS-2500"
+                  className="w-full border border-slate-300 rounded p-2 font-mono font-bold"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Tên Hàng Hóa / Vật Tư:</label>
+                <input
+                  type="text"
+                  required
+                  value={itemForm.name}
+                  onChange={e => setItemForm({ ...itemForm, name: e.target.value })}
+                  placeholder="VD: Pin CMOS máy Move2500"
+                  className="w-full border border-slate-300 rounded p-2 font-semibold"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Đơn Vị Tính:</label>
+                  <input
+                    type="text"
+                    required
+                    value={itemForm.unit}
+                    onChange={e => setItemForm({ ...itemForm, unit: e.target.value })}
+                    placeholder="VD: Cái, Bộ..."
+                    className="w-full border border-slate-300 rounded p-2"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Ngưỡng Báo Nhập:</label>
+                  <input
+                    type="number"
+                    min="1"
+                    required
+                    value={itemForm.minThreshold}
+                    onChange={e => setItemForm({ ...itemForm, minThreshold: Number(e.target.value) })}
+                    className="w-full border border-slate-300 rounded p-2 font-bold"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setIsItemModalOpen(false)}
+                  className="px-3 py-1.5 border border-slate-300 text-slate-700 rounded font-semibold"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-1.5 bg-indigo-600 text-white rounded font-bold"
+                >
+                  Lưu Mặt Hàng
                 </button>
               </div>
             </form>
@@ -1728,7 +1930,7 @@ export default function App() {
                   <input
                     type="text"
                     value={custForm.phone}
-                    onChange={e => setCustForm({ ...custForm, phone: e.target.value })}
+                    onChange={e => setCustForm({ phone: e.target.value })}
                     className="w-full border border-slate-300 rounded p-2 font-mono"
                   />
                 </div>
