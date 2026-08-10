@@ -30,10 +30,11 @@ import {
   ArrowRightLeft,
   Filter,
   BarChart2,
-  Calendar
+  Calendar,
+  Database
 } from 'lucide-react';
 
-// --- INITIAL MOCK DATA ---
+// --- DỮ LIỆU BAN ĐẦU ---
 const INITIAL_WAREHOUSES = [
   { id: 'WH01', name: 'Hà Nội', location: 'Cầu Giấy, Hà Nội' },
   { id: 'WH02', name: 'Hồ Chí Minh', location: 'Quận 9, TP. HCM' },
@@ -65,7 +66,7 @@ const INITIAL_REQUESTS = [
   {
     id: '01/26/XK',
     type: 'EXPORT',
-    requesterName: 'Phan Thị Khánh Phương',
+    requesterName: 'Nguyễn Trần Cường',
     customerName: 'BIDV CN Thành Công',
     warehouseId: 'WH01',
     destWarehouseId: '',
@@ -78,10 +79,10 @@ const INITIAL_REQUESTS = [
     paymentAmount: '',
     paymentDate: '',
     items: [
-      { itemId: 'DX8000', name: 'DX8000', partNo: 'PWT52012424A', quantity: 50, serialNotes: 'Cài Agribank' }
+      { itemId: 'DX8000', name: 'DX8000', partNo: 'PWT52012424A', quantity: 50, serialNotes: '' }
     ],
     note: 'Xuất linh kiện nội bộ',
-    recipientEmails: ['phuongptk@company.com']
+    recipientEmails: ['cuongnt@honghatst.vn']
   },
   {
     id: '02/26/NK',
@@ -99,37 +100,15 @@ const INITIAL_REQUESTS = [
     paymentAmount: '',
     paymentDate: '',
     items: [
-      { itemId: 'MH001', name: 'Máy tính xách tay Dell XPS 15', partNo: 'DELL-XPS15', quantity: 10, serialNotes: 'Lô hàng mới nhập' },
-      { itemId: 'CMOS-2500', name: 'Pin CMOS máy Move2500', partNo: 'CMOS-M25', quantity: 20, serialNotes: 'Lô hàng nhập kho' }
+      { itemId: 'MH001', name: 'Máy tính xách tay Dell XPS 15', partNo: 'DELL-XPS15', quantity: 10, serialNotes: '' },
+      { itemId: 'CMOS-2500', name: 'Pin CMOS máy Move2500', partNo: 'CMOS-M25', quantity: 20, serialNotes: '' }
     ],
     note: 'Nhập hàng mới từ nhà cung cấp FPT',
     recipientEmails: ['binh.tran@company.com']
-  },
-  {
-    id: '03/26/CK',
-    type: 'TRANSFER',
-    requesterName: 'Nguyễn Trần Cường',
-    customerName: 'Điều chuyển Nội bộ',
-    warehouseId: 'WH01',
-    destWarehouseId: 'WH02',
-    workType: 'INTERNAL_TRANSFER',
-    reasonType: 'INTERNAL',
-    date: '2026-08-07',
-    status: 'APPROVED',
-    approvedBy: 'Nguyễn Văn An',
-    contractNo: 'Lên Kế hoạch Luân chuyển',
-    paymentAmount: '',
-    paymentDate: '',
-    items: [
-      { itemId: 'MH003', name: 'Bàn phím Cơ Logitech MX Keys', partNo: 'LOGI-MX-KEY', quantity: 5, serialNotes: 'Chuyển hỗ trợ kho HCM' }
-    ],
-    note: 'Điều chuyển bàn phím từ Kho Hà Nội vào Kho Hồ Chí Minh',
-    recipientEmails: ['cuongnt@honghatst.vn']
   }
 ];
 
 export default function App() {
-  // Nạp tự động Tailwind CSS CDN khi khởi chạy để tránh lỗi vỡ giao diện trên Vercel
   useEffect(() => {
     if (!document.getElementById('tailwind-cdn')) {
       const script = document.createElement('script');
@@ -150,43 +129,43 @@ export default function App() {
 
   const [selectedPrintRequest, setSelectedPrintRequest] = useState(INITIAL_REQUESTS[0]);
 
-  // Filter & Search States
+  // Bộ lọc & Tìm kiếm
   const [searchTerm, setSearchTerm] = useState('');
   const [requestFilterType, setRequestFilterType] = useState('ALL');
   const [reportWarehouseFilter, setReportWarehouseFilter] = useState('ALL');
 
-  // Request Modal State
+  // Modal tạo phiếu (mặc định lấy nhân viên đầu tiên và khách hàng đầu tiên)
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
-  const [newRequestType, setNewRequestType] = useState('EXPORT'); // EXPORT, IMPORT, TRANSFER
+  const [newRequestType, setNewRequestType] = useState('EXPORT');
   const [customVoucherId, setCustomVoucherId] = useState('');
-  const [reqRequesterName, setReqRequesterName] = useState('Phan Thị Khánh Phương');
-  const [reqCustomerName, setReqCustomerName] = useState('');
-  const [reqWarehouse, setReqWarehouse] = useState('WH01'); // Kho nguồn / Kho chính
-  const [reqDestWarehouse, setReqDestWarehouse] = useState('WH02'); // Kho đích khi chuyển kho
+  const [reqRequesterName, setReqRequesterName] = useState(INITIAL_EMPLOYEES[0].name);
+  const [reqCustomerName, setReqCustomerName] = useState(INITIAL_CUSTOMERS[0].fullName);
+  const [reqWarehouse, setReqWarehouse] = useState('WH01');
+  const [reqDestWarehouse, setReqDestWarehouse] = useState('WH02');
   const [reqWorkType, setReqWorkType] = useState('REPAIR_SINGLE');
   const [reqReasonType, setReqReasonType] = useState('INTERNAL');
   const [reqContractNo, setReqContractNo] = useState('');
   const [reqPaymentAmount, setReqPaymentAmount] = useState('');
   const [reqPaymentDate, setReqPaymentDate] = useState('');
   const [reqNote, setReqNote] = useState('');
-  const [reqItemsList, setReqItemsList] = useState([{ itemId: 'DX8000', quantity: 50, serialNotes: 'Cài Agribank' }]);
+  const [reqItemsList, setReqItemsList] = useState([{ itemId: 'DX8000', quantity: 1, serialNotes: '' }]);
 
-  // Item Modal State
+  // Modal hàng hóa
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [itemForm, setItemForm] = useState({ id: '', name: '', partNo: '', unit: 'Cái', minThreshold: 10 });
 
-  // Employee Modal State
+  // Modal nhân viên
   const [isEmployeeModalOpen, setIsEmployeeModalOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState(null);
   const [empForm, setEmpForm] = useState({ id: '', name: '', title: '', email: '', role: 'User' });
 
-  // Customer Modal State
+  // Modal khách hàng
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [custForm, setCustForm] = useState({ id: '', code: '', fullName: '', contact: '', phone: '', email: '', address: '' });
 
-  // Stocktake State
+  // Kiểm kê kho
   const [stocktakeWH, setStocktakeWH] = useState('WH01');
   const [stocktakeInputs, setStocktakeInputs] = useState({});
 
@@ -208,7 +187,6 @@ export default function App() {
     }).filter(i => i.isLow);
   }, [items]);
 
-  // --- TÍNH TOÁN BÁO CÁO XUẤT NHẬP TỒN CHI TIẾT ---
   const movementReport = useMemo(() => {
     const approvedReqs = requests.filter(r => 
       r.status === 'APPROVED' && 
@@ -236,14 +214,12 @@ export default function App() {
               totalExport += qty;
             }
           } else if (req.type === 'TRANSFER') {
-            if (reportWarehouseFilter === 'ALL') {
-              // Nhìn tổng thể không làm thay đổi tổng tồn kho hệ thống
-            } else {
+            if (reportWarehouseFilter !== 'ALL') {
               if (req.warehouseId === reportWarehouseFilter) {
-                totalExport += qty; // Kho nguồn xuất đi
+                totalExport += qty;
               }
               if (req.destWarehouseId === reportWarehouseFilter) {
-                totalImport += qty; // Kho đích nhận về
+                totalImport += qty;
               }
             }
           }
@@ -273,7 +249,55 @@ export default function App() {
     };
   }, [items, requests, reportWarehouseFilter]);
 
-  // --- XUẤT EXCEL / CSV ---
+  // --- XUẤT / NHẬP TOÀN BỘ DỮ LIỆU HỆ THỐNG (JSON) ---
+  const handleExportAllData = () => {
+    const backupData = {
+      items,
+      warehouses,
+      employees,
+      customers,
+      requests,
+      exportDate: new Date().toISOString()
+    };
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", `Sao_Luu_He_Thong_Kho_${new Date().toISOString().split('T')[0]}.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+    showToast('Đã xuất toàn bộ dữ liệu hệ thống thành công!');
+  };
+
+  const handleImportAllData = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const parsed = JSON.parse(event.target.result);
+        if (parsed.items && parsed.employees && parsed.customers && parsed.requests) {
+          setItems(parsed.items);
+          setEmployees(parsed.employees);
+          setCustomers(parsed.customers);
+          setRequests(parsed.requests);
+          if (parsed.requests.length > 0) {
+            setSelectedPrintRequest(parsed.requests[0]);
+          }
+          showToast('Đã khôi phục toàn bộ dữ liệu hệ thống thành công!');
+        } else {
+          alert('Cấu trúc file sao lưu không hợp lệ!');
+        }
+      } catch (err) {
+        alert('Lỗi khi đọc file JSON!');
+      }
+      e.target.value = null;
+    };
+    reader.readAsText(file, 'UTF-8');
+  };
+
+  // --- XUẤT EXCEL / CSV CHO TỪNG MODULE ---
   const handleExportCSV = (dataType) => {
     let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
     
@@ -333,10 +357,9 @@ export default function App() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    showToast(`Đã xuất file Excel dữ liệu ${dataType} thành công!`);
+    showToast(`Đã xuất file báo cáo ${dataType} thành công!`);
   };
 
-  // --- NHẬP EXCEL / CSV ---
   const handleImportCSV = (e, dataType) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -360,52 +383,14 @@ export default function App() {
                 partNo: r[2] || '',
                 unit: r[3] || 'Cái',
                 minThreshold: Number(r[7]) || Number(r[4]) || 10,
-                stock: { 
-                  WH01: Number(r[4]) || 0, 
-                  WH02: Number(r[5]) || 0 
-                }
+                stock: { WH01: Number(r[4]) || 0, WH02: Number(r[5]) || 0 }
               });
               addedCount++;
             }
           }
         }
         setItems(newItems);
-        showToast(`Đã nhập thành công ${addedCount} mặt hàng từ file Excel!`);
-      } else if (dataType === 'REQUESTS' && rows.length > 1) {
-        const newReqs = [...requests];
-        let addedReqCount = 0;
-        for (let i = 1; i < rows.length; i++) {
-          const r = rows[i];
-          if (r.length >= 4 && r[0]) {
-            const exists = newReqs.find(req => req.id === r[0]);
-            if (!exists) {
-              const typeStr = (r[1] || '').toUpperCase();
-              let reqType = 'EXPORT';
-              if (typeStr.includes('NHẬP') || typeStr.includes('IMPORT')) reqType = 'IMPORT';
-              if (typeStr.includes('CHUYỂN') || typeStr.includes('TRANSFER')) reqType = 'TRANSFER';
-
-              newReqs.unshift({
-                id: r[0],
-                type: reqType,
-                date: r[2] || new Date().toISOString().split('T')[0],
-                requesterName: r[3] || 'Nhân viên',
-                customerName: r[4] || 'Đối tác',
-                warehouseId: r[5] || 'WH01',
-                destWarehouseId: reqType === 'TRANSFER' ? 'WH02' : '',
-                workType: 'REPAIR_SINGLE',
-                reasonType: 'INTERNAL',
-                status: (r[6] || '').includes('duyệt') || r[6] === 'APPROVED' ? 'APPROVED' : 'PENDING',
-                approvedBy: r[7] || '',
-                items: [{ itemId: 'DX8000', name: r[8] || 'DX8000', partNo: 'PWT52012424A', quantity: 1, serialNotes: '' }],
-                note: r[9] || 'Nhập từ file Excel',
-                recipientEmails: ['cuongnt@honghatst.vn']
-              });
-              addedReqCount++;
-            }
-          }
-        }
-        setRequests(newReqs);
-        showToast(`Đã nhập thành công ${addedReqCount} phiếu Nhập/Xuất kho từ file Excel!`);
+        showToast(`Đã nhập thành công ${addedCount} mặt hàng từ file!`);
       } else if (dataType === 'EMPLOYEES' && rows.length > 1) {
         const newEmps = [...employees];
         let addedCount = 0;
@@ -414,19 +399,13 @@ export default function App() {
           if (r.length >= 2 && r[0]) {
             const exists = newEmps.find(emp => emp.id === r[0]);
             if (!exists) {
-              newEmps.push({ 
-                id: r[0], 
-                name: r[1] || '', 
-                title: r[2] || '', 
-                email: r[3] || '', 
-                role: r[4] || 'User' 
-              });
+              newEmps.push({ id: r[0], name: r[1] || '', title: r[2] || '', email: r[3] || '', role: r[4] || 'User' });
               addedCount++;
             }
           }
         }
         setEmployees(newEmps);
-        showToast(`Đã nhập thành công ${addedCount} nhân viên từ file Excel!`);
+        showToast(`Đã nhập thành công ${addedCount} nhân viên từ file!`);
       } else if (dataType === 'CUSTOMERS' && rows.length > 1) {
         const newCusts = [...customers];
         let addedCount = 0;
@@ -435,43 +414,20 @@ export default function App() {
           if (r.length >= 2 && r[0]) {
             const exists = newCusts.find(c => c.code === r[0]);
             if (!exists) {
-              newCusts.push({ 
-                id: `KH00${newCusts.length + 1}`, 
-                code: r[0], 
-                fullName: r[1] || r[0], 
-                contact: r[2] || '', 
-                phone: r[3] || '', 
-                email: r[4] || '', 
-                address: r[5] || '' 
-              });
+              newCusts.push({ id: `KH00${newCusts.length + 1}`, code: r[0], fullName: r[1] || r[0], contact: r[2] || '', phone: r[3] || '', email: r[4] || '', address: r[5] || '' });
               addedCount++;
             }
           }
         }
         setCustomers(newCusts);
-        showToast(`Đã nhập thành công ${addedCount} khách hàng từ file Excel!`);
-      } else if (dataType === 'STOCKTAKE' && rows.length > 1) {
-        const newInputs = { ...stocktakeInputs };
-        let updatedCount = 0;
-        for (let i = 1; i < rows.length; i++) {
-          const r = rows[i];
-          if (r.length >= 2 && r[0]) {
-            const itemId = r[0];
-            const actualQty = r[3] !== undefined && r[3] !== '' ? Number(r[3]) : Number(r[2]);
-            if (!isNaN(actualQty)) {
-              newInputs[itemId] = actualQty;
-              updatedCount++;
-            }
-          }
-        }
-        setStocktakeInputs(newInputs);
-        showToast(`Đã nhập số lượng kiểm kê cho ${updatedCount} mặt hàng từ file Excel!`);
+        showToast(`Đã nhập thành công ${addedCount} khách hàng từ file!`);
       }
       e.target.value = null;
     };
     reader.readAsText(file, 'UTF-8');
   };
 
+  // CRUD Hàng hóa
   const handleOpenItemModal = (item = null) => {
     if (item) {
       setEditingItem(item);
@@ -487,21 +443,75 @@ export default function App() {
     e.preventDefault();
     if (editingItem) {
       setItems(items.map(i => i.id === editingItem.id ? { ...i, ...itemForm } : i));
-      showToast('Đã cập nhật thông tin hàng hóa thành công!');
+      showToast('Đã cập nhật hàng hóa thành công!');
     } else {
-      const newItem = {
-        ...itemForm,
-        stock: { WH01: 0, WH02: 0 }
-      };
-      setItems([...items, newItem]);
-      showToast('Đã thêm mặt hàng mới vào danh mục!');
+      setItems([...items, { ...itemForm, stock: { WH01: 0, WH02: 0 } }]);
+      showToast('Đã thêm mặt hàng mới!');
     }
     setIsItemModalOpen(false);
   };
 
   const handleDeleteItem = (id) => {
     setItems(items.filter(i => i.id !== id));
-    showToast('Đã xóa mặt hàng khỏi hệ thống!');
+    showToast('Đã xóa mặt hàng!');
+  };
+
+  // CRUD Nhân viên
+  const handleOpenEmpModal = (emp = null) => {
+    if (emp) {
+      setEditingEmployee(emp);
+      setEmpForm({ ...emp });
+    } else {
+      setEditingEmployee(null);
+      setEmpForm({ id: `NV00${employees.length + 1}`, name: '', title: '', email: '', role: 'User' });
+    }
+    setIsEmployeeModalOpen(true);
+  };
+
+  const handleSaveEmployee = (e) => {
+    e.preventDefault();
+    if (editingEmployee) {
+      setEmployees(employees.map(emp => emp.id === editingEmployee.id ? empForm : emp));
+      showToast('Đã cập nhật nhân viên thành công!');
+    } else {
+      setEmployees([...employees, empForm]);
+      showToast('Đã thêm nhân viên mới!');
+    }
+    setIsEmployeeModalOpen(false);
+  };
+
+  const handleDeleteEmployee = (id) => {
+    setEmployees(employees.filter(e => e.id !== id));
+    showToast('Đã xóa nhân viên!');
+  };
+
+  // CRUD Khách hàng
+  const handleOpenCustModal = (cust = null) => {
+    if (cust) {
+      setEditingCustomer(cust);
+      setCustForm({ ...cust });
+    } else {
+      setEditingCustomer(null);
+      setCustForm({ id: `KH00${customers.length + 1}`, code: '', fullName: '', contact: '', phone: '', email: '', address: '' });
+    }
+    setIsCustomerModalOpen(true);
+  };
+
+  const handleSaveCustomer = (e) => {
+    e.preventDefault();
+    if (editingCustomer) {
+      setCustomers(customers.map(c => c.id === editingCustomer.id ? custForm : c));
+      showToast('Đã cập nhật khách hàng thành công!');
+    } else {
+      setCustomers([...customers, custForm]);
+      showToast('Đã thêm khách hàng mới!');
+    }
+    setIsCustomerModalOpen(false);
+  };
+
+  const handleDeleteCustomer = (id) => {
+    setCustomers(customers.filter(c => c.id !== id));
+    showToast('Đã xóa khách hàng!');
   };
 
   const handleCreateRequest = (e) => {
@@ -519,7 +529,7 @@ export default function App() {
         name: matchedItem ? matchedItem.name : '',
         partNo: matchedItem ? (matchedItem.partNo || '') : '',
         quantity: Number(ri.quantity) || 1,
-        serialNotes: ri.serialNotes || ''
+        serialNotes: ri.serialNotes || '' // mặc định trống
       };
     });
 
@@ -631,62 +641,6 @@ export default function App() {
     window.open(gmailUrl, '_blank');
   };
 
-  const handleOpenEmpModal = (emp = null) => {
-    if (emp) {
-      setEditingEmployee(emp);
-      setEmpForm({ ...emp });
-    } else {
-      setEditingEmployee(null);
-      setEmpForm({ id: `NV00${employees.length + 1}`, name: '', title: '', email: '', role: 'User' });
-    }
-    setIsEmployeeModalOpen(true);
-  };
-
-  const handleSaveEmployee = (e) => {
-    e.preventDefault();
-    if (editingEmployee) {
-      setEmployees(employees.map(e => e.id === editingEmployee.id ? empForm : e));
-      showToast('Đã cập nhật thông tin nhân viên!');
-    } else {
-      setEmployees([...employees, empForm]);
-      showToast('Đã thêm nhân viên mới!');
-    }
-    setIsEmployeeModalOpen(false);
-  };
-
-  const handleDeleteEmployee = (id) => {
-    setEmployees(employees.filter(e => e.id !== id));
-    showToast('Đã xóa nhân viên!');
-  };
-
-  const handleOpenCustModal = (cust = null) => {
-    if (cust) {
-      setEditingCustomer(cust);
-      setCustForm({ ...cust });
-    } else {
-      setEditingCustomer(null);
-      setCustForm({ id: `KH00${customers.length + 1}`, code: '', fullName: '', contact: '', phone: '', email: '', address: '' });
-    }
-    setIsCustomerModalOpen(true);
-  };
-
-  const handleSaveCustomer = (e) => {
-    e.preventDefault();
-    if (editingCustomer) {
-      setCustomers(customers.map(c => c.id === editingCustomer.id ? custForm : c));
-      showToast('Đã cập nhật thông tin khách hàng!');
-    } else {
-      setCustomers([...customers, custForm]);
-      showToast('Đã thêm khách hàng mới!');
-    }
-    setIsCustomerModalOpen(false);
-  };
-
-  const handleDeleteCustomer = (id) => {
-    setCustomers(customers.filter(c => c.id !== id));
-    showToast('Đã xóa khách hàng!');
-  };
-
   const handleStocktakeSave = (itemId, whId) => {
     const val = stocktakeInputs[itemId];
     if (val === undefined || val === '') return;
@@ -713,7 +667,6 @@ export default function App() {
     });
   }, [requests, searchTerm, requestFilterType]);
 
-  // Format hiển thị ngày tiếng Việt
   const formatDateVN = (dateStr) => {
     if (!dateStr) return 'tháng ... năm ...';
     const parts = dateStr.split('-');
@@ -725,7 +678,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 font-sans flex flex-col">
-      {/* --- TOP BANNER HEADER --- */}
+      {/* --- HEADER --- */}
       <header className="bg-slate-900 text-white shadow-md sticky top-0 z-30 print:hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
           <div className="flex items-center gap-3">
@@ -741,6 +694,19 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-4">
+            {/* Thanh sao lưu toàn bộ dữ liệu hệ thống */}
+            <div className="flex items-center gap-1.5 bg-slate-800 px-3 py-1 rounded-lg border border-slate-700">
+              <Database className="w-4 h-4 text-emerald-400" />
+              <button onClick={handleExportAllData} className="text-xs font-bold text-emerald-400 hover:underline">
+                Sao lưu CSDL
+              </button>
+              <span className="text-slate-600">|</span>
+              <label className="text-xs font-bold text-indigo-400 cursor-pointer hover:underline">
+                Khôi phục
+                <input type="file" accept=".json" onChange={handleImportAllData} className="hidden" />
+              </label>
+            </div>
+
             <div className="hidden lg:flex items-center gap-2 bg-emerald-950 text-emerald-400 border border-emerald-800 px-2.5 py-1 rounded-full text-xs font-mono">
               <Radio className="w-3.5 h-3.5 animate-pulse text-emerald-400" />
               <span>Realtime Online</span>
@@ -762,9 +728,9 @@ export default function App() {
         </div>
       </header>
 
-      {/* --- MAIN BODY & NAVIGATION TABS --- */}
+      {/* --- MAIN BODY & TABS --- */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 flex-grow w-full">
-        {/* Desktop Navigation Menu */}
+        {/* Desktop Navigation */}
         <div className="hidden md:flex items-center gap-2 border-b border-slate-200 overflow-x-auto pb-2 mb-6 print:hidden">
           {[
             { id: 'dashboard', label: 'Báo cáo Trực quan', icon: TrendingUp },
@@ -795,7 +761,7 @@ export default function App() {
           })}
         </div>
 
-        {/* Mobile Dropdown Menu Selector */}
+        {/* Mobile Navigation */}
         <div className="md:hidden mb-4 print:hidden">
           <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Chọn chức năng:</label>
           <select
@@ -813,7 +779,7 @@ export default function App() {
           </select>
         </div>
 
-        {/* Toast Notification */}
+        {/* Toast */}
         {toastMessage && (
           <div className="mb-4 bg-emerald-600 text-white px-4 py-3 rounded-lg shadow-lg flex items-center justify-between print:hidden text-xs sm:text-sm animate-bounce">
             <div className="flex items-center gap-2 font-medium">
@@ -826,10 +792,9 @@ export default function App() {
           </div>
         )}
 
-        {/* ================= TAB 1: DASHBOARD & BÁO CÁO XUẤT NHẬP TỒN ================= */}
+        {/* ================= TAB 1: DASHBOARD ================= */}
         {activeTab === 'dashboard' && (
           <div className="space-y-6">
-            {/* THỐNG KÊ TỔNG QUAN CHỈ SỐ */}
             <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
               <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-3">
                 <div className="p-2.5 bg-blue-100 text-blue-600 rounded-lg">
@@ -843,7 +808,7 @@ export default function App() {
 
               <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-3">
                 <div className="p-2.5 bg-emerald-100 text-emerald-600 rounded-lg">
-                  <ArrowDownLeft className="w-5 h-5 text-emerald-600" />
+                  <ArrowDownLeft className="w-5 h-5" />
                 </div>
                 <div>
                   <p className="text-2xs font-semibold text-slate-500 uppercase">Tổng nhập kho</p>
@@ -853,7 +818,7 @@ export default function App() {
 
               <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-3">
                 <div className="p-2.5 bg-amber-100 text-amber-600 rounded-lg">
-                  <ArrowUpRight className="w-5 h-5 text-amber-600" />
+                  <ArrowUpRight className="w-5 h-5" />
                 </div>
                 <div>
                   <p className="text-2xs font-semibold text-slate-500 uppercase">Tổng xuất kho</p>
@@ -900,7 +865,6 @@ export default function App() {
               </div>
             )}
 
-            {/* BÁO CÁO XUẤT - NHẬP - TỒN BẢNG TỔNG HỢP */}
             <div className="bg-white p-4 sm:p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b pb-4">
                 <div>
@@ -934,7 +898,6 @@ export default function App() {
                 </div>
               </div>
 
-              {/* BẢNG BÁO CÁO CHI TIẾT XUẤT NHẬP TỒN */}
               <div className="overflow-x-auto">
                 <table className="min-w-full text-left border-collapse text-xs sm:text-sm">
                   <thead>
@@ -994,44 +957,10 @@ export default function App() {
                 </table>
               </div>
             </div>
-
-            {/* BÁO CÁO ĐỒ HỌA TRỰC QUAN TIẾN TRÌNH TỒN KHO */}
-            <div className="bg-white p-4 sm:p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
-              <h3 className="text-sm sm:text-base font-bold text-slate-800 flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-indigo-600" /> Đồ họa Mức Tồn Kho So Với Định Mức An Toàn
-              </h3>
-
-              <div className="space-y-4">
-                {items.map(item => {
-                  const totalStock = Object.values(item.stock).reduce((a, b) => a + b, 0);
-                  const percentage = Math.min(100, Math.round((totalStock / (item.minThreshold * 3)) * 100));
-                  const isLow = totalStock <= item.minThreshold;
-
-                  return (
-                    <div key={item.id} className="space-y-1">
-                      <div className="flex justify-between text-xs font-semibold">
-                        <span className="text-slate-800 font-bold truncate max-w-[200px] sm:max-w-md">{item.id} - {item.name}</span>
-                        <span className={isLow ? 'text-red-600 font-bold' : 'text-slate-600'}>
-                          Tồn: {totalStock} {item.unit} (Ngưỡng: {item.minThreshold})
-                        </span>
-                      </div>
-                      <div className="w-full bg-slate-100 rounded-full h-2.5 sm:h-3 overflow-hidden">
-                        <div
-                          className={`h-2.5 sm:h-3 rounded-full transition-all duration-500 ${
-                            isLow ? 'bg-red-500' : 'bg-emerald-500'
-                          }`}
-                          style={{ width: `${Math.max(5, percentage)}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
           </div>
         )}
 
-        {/* ================= TAB 2: INVENTORY & THRESHOLDS ================= */}
+        {/* ================= TAB 2: INVENTORY ================= */}
         {activeTab === 'inventory' && (
           <div className="bg-white p-4 sm:p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -1122,7 +1051,7 @@ export default function App() {
           </div>
         )}
 
-        {/* ================= TAB 3: PHIẾU NHẬP/XUẤT KHO & PHÊ DUYỆT ================= */}
+        {/* ================= TAB 3: REQUESTS ================= */}
         {activeTab === 'requests' && (
           <div className="bg-white p-4 sm:p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
@@ -1139,11 +1068,6 @@ export default function App() {
                   <Plus className="w-4 h-4" /> Tạo Phiếu Mới
                 </button>
 
-                <label className="flex items-center gap-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-2 rounded-lg text-xs font-bold cursor-pointer border border-indigo-200">
-                  <Upload className="w-3.5 h-3.5" /> Nhập Excel Phiếu
-                  <input type="file" accept=".csv" onChange={(e) => handleImportCSV(e, 'REQUESTS')} className="hidden" />
-                </label>
-
                 <button
                   onClick={() => handleExportCSV('REQUESTS')}
                   className="flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg text-xs font-bold shadow-sm"
@@ -1153,7 +1077,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* Filter Bar */}
             <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 border-t border-slate-100">
               <div className="flex items-center gap-2 w-full sm:w-auto">
                 <Filter className="w-4 h-4 text-slate-400" />
@@ -1272,8 +1195,8 @@ export default function App() {
                                 setSelectedPrintRequest(req);
                                 setActiveTab('print');
                               }}
-                              className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded text-2xs flex items-center gap-1 border border-slate-300"
-                              title="In phiếu / Gửi Mail"
+                              className="px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded text-2xs flex items-center gap-1 border border-indigo-200"
+                              title="Xem chi tiết & In phiếu"
                             >
                               <Printer className="w-3 h-3" /> Xem & In
                             </button>
@@ -1288,13 +1211,13 @@ export default function App() {
           </div>
         )}
 
-        {/* ================= TAB 4: QUẢN LÝ DANH MỤC HÀNG HÓA ================= */}
+        {/* ================= TAB 4: ITEMS DIRECTORY ================= */}
         {activeTab === 'itemsDir' && (
           <div className="bg-white p-4 sm:p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <h3 className="text-base sm:text-lg font-bold text-slate-800">DANH MỤC SẢN PHẨM & VẬT TƯ</h3>
-                <p className="text-xs text-slate-500">Thêm, sửa, xóa các mã vật tư trong danh mục quản lý.</p>
+                <p className="text-xs text-slate-500">Thêm, sửa, xóa, xuất và nhập dữ liệu hàng hóa qua Excel.</p>
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
@@ -1365,13 +1288,26 @@ export default function App() {
           </div>
         )}
 
-        {/* ================= TAB 5: IN PHIẾU & GỬI EMAIL (MẪU ẨN/HIỆN CHUẨN) ================= */}
-        {activeTab === 'print' && selectedPrintRequest && (
+        {/* ================= TAB 5: PRINT & PREVIEW ================= */}
+        {activeTab === 'print' && (
           <div className="space-y-6">
             <div className="bg-white p-4 sm:p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4 print:hidden">
-              <div>
-                <h3 className="text-base sm:text-lg font-bold text-slate-800">IN PHIẾU & GỬI EMAIL THÔNG BÁO</h3>
-                <p className="text-xs text-slate-500">Xem trước và in phiếu kho chuẩn định dạng báo cáo.</p>
+              <div className="flex items-center gap-3 w-full sm:w-auto">
+                <span className="text-xs font-bold text-slate-700 uppercase">Chọn phiếu để in:</span>
+                <select
+                  value={selectedPrintRequest ? selectedPrintRequest.id : ''}
+                  onChange={(e) => {
+                    const found = requests.find(r => r.id === e.target.value);
+                    if (found) setSelectedPrintRequest(found);
+                  }}
+                  className="bg-slate-50 border border-slate-300 rounded-lg p-2 text-xs font-bold text-indigo-700 shadow-sm max-w-xs"
+                >
+                  {requests.map(r => (
+                    <option key={r.id} value={r.id}>
+                      [{r.type}] {r.id} - {r.customerName || r.requesterName}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
@@ -1390,196 +1326,187 @@ export default function App() {
               </div>
             </div>
 
-            {/* MẪU IN PHIẾU KHO HIỂN THỊ DỘNG THEO LOẠI PHIẾU */}
-            <div className="bg-white p-8 rounded-xl border border-slate-300 shadow-md max-w-3xl mx-auto text-slate-900 font-sans print:shadow-none print:border-none print:p-0">
-              {/* Header Góc Phải */}
-              <div className="text-right text-xs text-slate-700 mb-4">
-                <p className="font-semibold">Mẫu số 02 - VT</p>
-                <p className="text-2xs italic text-slate-600">(Ban hành theo Thông tư số 133/2016/TT-BTC</p>
-                <p className="text-2xs italic text-slate-600">Ngày 26/08/2016 của Bộ Tài chính)</p>
-              </div>
-
-              {/* Tên Tiêu Đề Phiếu Dynamic */}
-              <div className="text-center mb-6">
-                <h1 className="text-xl sm:text-2xl font-black uppercase tracking-wide">
-                  {selectedPrintRequest.type === 'IMPORT' 
-                    ? 'PHIẾU NHẬP KHO' 
-                    : selectedPrintRequest.type === 'TRANSFER' 
-                      ? 'PHIẾU CHUYỂN KHO NỘI BỘ' 
-                      : 'PHIẾU XUẤT KHO'}
-                </h1>
-                <p className="text-xs italic text-slate-700 mt-1">
-                  {formatDateVN(selectedPrintRequest.date)}
-                </p>
-                <p className="text-sm font-bold italic mt-1">
-                  Số phiếu: <span className="font-mono">{selectedPrintRequest.id}</span>
-                </p>
-              </div>
-
-              {/* Các trường thông tin căn lề trái & Ẩn/Hiện linh hoạt */}
-              <div className="space-y-2.5 text-xs sm:text-sm mb-6 text-left leading-relaxed">
-                <div className="flex">
-                  <span className="w-56 font-semibold">1. Họ và tên người yêu cầu:</span>
-                  <span className="font-bold text-slate-900">{selectedPrintRequest.requesterName}</span>
+            {selectedPrintRequest && (
+              <div className="bg-white p-8 rounded-xl border border-slate-300 shadow-md max-w-3xl mx-auto text-slate-900 font-sans print:shadow-none print:border-none print:p-0">
+                <div className="text-right text-xs text-slate-700 mb-4">
+                  <p className="font-semibold">Mẫu số 02 - VT</p>
+                  <p className="text-2xs italic text-slate-600">(Ban hành theo Thông tư số 133/2016/TT-BTC</p>
+                  <p className="text-2xs italic text-slate-600">Ngày 26/08/2016 của Bộ Tài chính)</p>
                 </div>
 
-                <div className="flex">
-                  <span className="w-56 font-semibold">
-                    2. {selectedPrintRequest.type === 'IMPORT' ? 'Tên nhà cung cấp:' : 'Tên khách hàng/Đối tác:'}
-                  </span>
-                  <span>{selectedPrintRequest.customerName || '...........................................................................................'}</span>
+                <div className="text-center mb-6">
+                  <h1 className="text-xl sm:text-2xl font-black uppercase tracking-wide">
+                    {selectedPrintRequest.type === 'IMPORT' 
+                      ? 'PHIẾU NHẬP KHO' 
+                      : selectedPrintRequest.type === 'TRANSFER' 
+                        ? 'PHIẾU CHUYỂN KHO NỘI BỘ' 
+                        : 'PHIẾU XUẤT KHO'}
+                  </h1>
+                  <p className="text-xs italic text-slate-700 mt-1">
+                    {formatDateVN(selectedPrintRequest.date)}
+                  </p>
+                  <p className="text-sm font-bold italic mt-1">
+                    Số phiếu: <span className="font-mono">{selectedPrintRequest.id}</span>
+                  </p>
                 </div>
 
-                {/* Kho xuất / kho nhập hiển thị phù hợp */}
-                <div className="flex items-center gap-6">
-                  <span className="w-56 font-semibold">
-                    3. {selectedPrintRequest.type === 'TRANSFER' ? 'Chuyển từ kho đến kho:' : selectedPrintRequest.type === 'IMPORT' ? 'Nhập tại kho:' : 'Xuất tại kho:'}
-                  </span>
-                  {selectedPrintRequest.type === 'TRANSFER' ? (
-                    <span className="font-bold text-indigo-700">
-                      Kho {selectedPrintRequest.warehouseId === 'WH01' ? 'Hà Nội' : 'Hồ Chí Minh'} ➔ Kho {selectedPrintRequest.destWarehouseId === 'WH01' ? 'Hà Nội' : 'Hồ Chí Minh'}
+                <div className="space-y-2.5 text-xs sm:text-sm mb-6 text-left leading-relaxed">
+                  <div className="flex">
+                    <span className="w-56 font-semibold">1. Họ và tên người yêu cầu:</span>
+                    <span className="font-bold text-slate-900">{selectedPrintRequest.requesterName}</span>
+                  </div>
+
+                  <div className="flex">
+                    <span className="w-56 font-semibold">
+                      2. {selectedPrintRequest.type === 'IMPORT' ? 'Tên nhà cung cấp:' : 'Tên khách hàng/Đối tác:'}
                     </span>
-                  ) : (
-                    <div className="flex items-center gap-6">
-                      <span className="inline-flex items-center gap-1.5">
-                        <span className="font-bold">{selectedPrintRequest.warehouseId === 'WH01' ? '☑' : '☐'}</span> Hà Nội
+                    <span>{selectedPrintRequest.customerName || '...........................................................................................'}</span>
+                  </div>
+
+                  <div className="flex items-center gap-6">
+                    <span className="w-56 font-semibold">
+                      3. {selectedPrintRequest.type === 'TRANSFER' ? 'Chuyển từ kho đến kho:' : selectedPrintRequest.type === 'IMPORT' ? 'Nhập tại kho:' : 'Xuất tại kho:'}
+                    </span>
+                    {selectedPrintRequest.type === 'TRANSFER' ? (
+                      <span className="font-bold text-indigo-700">
+                        Kho {selectedPrintRequest.warehouseId === 'WH01' ? 'Hà Nội' : 'Hồ Chí Minh'} ➔ Kho {selectedPrintRequest.destWarehouseId === 'WH01' ? 'Hà Nội' : 'Hồ Chí Minh'}
                       </span>
-                      <span className="inline-flex items-center gap-1.5">
-                        <span className="font-bold">{selectedPrintRequest.warehouseId === 'WH02' ? '☑' : '☐'}</span> Hồ Chí Minh
+                    ) : (
+                      <div className="flex items-center gap-6">
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className="font-bold">{selectedPrintRequest.warehouseId === 'WH01' ? '☑' : '☐'}</span> Hà Nội
+                        </span>
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className="font-bold">{selectedPrintRequest.warehouseId === 'WH02' ? '☑' : '☐'}</span> Hồ Chí Minh
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {selectedPrintRequest.type === 'EXPORT' && (
+                    <div className="space-y-1">
+                      <span className="font-semibold block">4. Sửa chữa/ Bán máy:</span>
+                      <div className="grid grid-cols-2 gap-y-1.5 pl-6 pt-1">
+                        <span className="inline-flex items-center gap-2">
+                          <span className="font-bold">{selectedPrintRequest.workType === 'REPAIR_SINGLE' ? '☑' : '☐'}</span> Sửa chữa lẻ
+                        </span>
+                        <span className="inline-flex items-center gap-2">
+                          <span className="font-bold">{selectedPrintRequest.workType === 'REPAIR_PROJECT' ? '☑' : '☐'}</span> Sửa chữa dự án
+                        </span>
+                        <span className="inline-flex items-center gap-2">
+                          <span className="font-bold">{selectedPrintRequest.workType === 'SALE_SINGLE' ? '☑' : '☐'}</span> Bán máy lẻ
+                        </span>
+                        <span className="inline-flex items-center gap-2">
+                          <span className="font-bold">{selectedPrintRequest.workType === 'SALE_PROJECT' ? '☑' : '☐'}</span> Bán máy dự án
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedPrintRequest.type !== 'IMPORT' && (
+                    <div className="space-y-1 pt-1">
+                      <span className="font-semibold block">
+                        {selectedPrintRequest.type === 'TRANSFER' ? '4. Lý do chuyển kho:' : '5. Lý do xuất kho:'}
                       </span>
+                      <div className="flex items-center gap-8 pl-6 pt-1">
+                        <span className="inline-flex items-center gap-2">
+                          <span className="font-bold">{selectedPrintRequest.reasonType === 'SERVICE' ? '☑' : '☐'}</span> Dịch vụ
+                        </span>
+                        <span className="inline-flex items-center gap-2">
+                          <span className="font-bold">{selectedPrintRequest.reasonType === 'WARRANTY' ? '☑' : '☐'}</span> Bảo hành
+                        </span>
+                        <span className="inline-flex items-center gap-2">
+                          <span className="font-bold">{selectedPrintRequest.reasonType === 'INTERNAL' ? '☑' : '☐'}</span> Nội bộ
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedPrintRequest.type === 'EXPORT' && (
+                    <>
+                      <div className="flex pt-1">
+                        <span className="w-56 font-semibold">6. Số Hợp đồng/ Báo giá:</span>
+                        <span>{selectedPrintRequest.contractNo || '...........................................................................................'}</span>
+                      </div>
+
+                      <div className="flex pt-1">
+                        <span className="w-56 font-semibold">7. Số tiền (nếu đã thanh toán):</span>
+                        <span className="flex-grow">
+                          {selectedPrintRequest.paymentAmount || '...........................................'} 
+                          <span className="ml-4 font-semibold">Ngày thanh toán:</span> {selectedPrintRequest.paymentDate || '..........................'}
+                        </span>
+                      </div>
+                    </>
+                  )}
+
+                  {selectedPrintRequest.note && (
+                    <div className="flex pt-1 italic text-slate-700">
+                      <span className="w-56 font-semibold not-italic">Diễn giải/Ghi chú:</span>
+                      <span>{selectedPrintRequest.note}</span>
                     </div>
                   )}
                 </div>
 
-                {/* Chỉ hiện Mục 4 khi là Phiếu Xuất Kho */}
-                {selectedPrintRequest.type === 'EXPORT' && (
-                  <div className="space-y-1">
-                    <span className="font-semibold block">4. Sửa chữa/ Bán máy:</span>
-                    <div className="grid grid-cols-2 gap-y-1.5 pl-6 pt-1">
-                      <span className="inline-flex items-center gap-2">
-                        <span className="font-bold">{selectedPrintRequest.workType === 'REPAIR_SINGLE' ? '☑' : '☐'}</span> Sửa chữa lẻ
-                      </span>
-                      <span className="inline-flex items-center gap-2">
-                        <span className="font-bold">{selectedPrintRequest.workType === 'REPAIR_PROJECT' ? '☑' : '☐'}</span> Sửa chữa dự án
-                      </span>
-                      <span className="inline-flex items-center gap-2">
-                        <span className="font-bold">{selectedPrintRequest.workType === 'SALE_SINGLE' ? '☑' : '☐'}</span> Bán máy lẻ
-                      </span>
-                      <span className="inline-flex items-center gap-2">
-                        <span className="font-bold">{selectedPrintRequest.workType === 'SALE_PROJECT' ? '☑' : '☐'}</span> Bán máy dự án
-                      </span>
-                    </div>
-                  </div>
-                )}
-
-                {/* Mục Lý do chỉ hiển thị khi không phải là Phiếu Nhập Kho */}
-                {selectedPrintRequest.type !== 'IMPORT' && (
-                  <div className="space-y-1 pt-1">
-                    <span className="font-semibold block">
-                      {selectedPrintRequest.type === 'TRANSFER' ? '4. Lý do chuyển kho:' : '5. Lý do xuất kho:'}
-                    </span>
-                    <div className="flex items-center gap-8 pl-6 pt-1">
-                      <span className="inline-flex items-center gap-2">
-                        <span className="font-bold">{selectedPrintRequest.reasonType === 'SERVICE' ? '☑' : '☐'}</span> Dịch vụ
-                      </span>
-                      <span className="inline-flex items-center gap-2">
-                        <span className="font-bold">{selectedPrintRequest.reasonType === 'WARRANTY' ? '☑' : '☐'}</span> Bảo hành
-                      </span>
-                      <span className="inline-flex items-center gap-2">
-                        <span className="font-bold">{selectedPrintRequest.reasonType === 'INTERNAL' ? '☑' : '☐'}</span> Nội bộ
-                      </span>
-                    </div>
-                  </div>
-                )}
-
-                {/* Các mục hợp đồng / tài chính chỉ hiển thị khi là Phiếu Xuất Kho */}
-                {selectedPrintRequest.type === 'EXPORT' && (
-                  <>
-                    <div className="flex pt-1">
-                      <span className="w-56 font-semibold">6. Số Hợp đồng/ Báo giá:</span>
-                      <span>{selectedPrintRequest.contractNo || '...........................................................................................'}</span>
-                    </div>
-
-                    <div className="flex pt-1">
-                      <span className="w-56 font-semibold">7. Số tiền (nếu đã thanh toán):</span>
-                      <span className="flex-grow">
-                        {selectedPrintRequest.paymentAmount || '...........................................'} 
-                        <span className="ml-4 font-semibold">Ngày thanh toán:</span> {selectedPrintRequest.paymentDate || '..........................'}
-                      </span>
-                    </div>
-                  </>
-                )}
-
-                {selectedPrintRequest.note && (
-                  <div className="flex pt-1 italic text-slate-700">
-                    <span className="w-56 font-semibold not-italic">Diễn giải/Ghi chú:</span>
-                    <span>{selectedPrintRequest.note}</span>
-                  </div>
-                )}
-              </div>
-
-              {/* BẢNG SẢN PHẨM / VẬT TƯ CHUẨN 5 CỘT */}
-              <table className="min-w-full border-collapse border border-slate-900 text-xs sm:text-sm mb-8">
-                <thead>
-                  <tr className="bg-slate-50 text-center font-bold border-b border-slate-900 uppercase">
-                    <th className="border border-slate-900 p-2 w-12">STT</th>
-                    <th className="border border-slate-900 p-2">TÊN HÀNG HÓA</th>
-                    <th className="border border-slate-900 p-2 w-32">PART NO</th>
-                    <th className="border border-slate-900 p-2 w-20">SỐ LƯỢNG</th>
-                    <th className="border border-slate-900 p-2">GHI CHÚ – SERIAL</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {selectedPrintRequest.items.map((it, idx) => (
-                    <tr key={idx} className="text-center">
-                      <td className="border border-slate-900 p-2 font-medium">{idx + 1}</td>
-                      <td className="border border-slate-900 p-2 text-left font-semibold">{it.name}</td>
-                      <td className="border border-slate-900 p-2 font-mono">{it.partNo || it.itemId}</td>
-                      <td className="border border-slate-900 p-2 font-bold">{it.quantity}</td>
-                      <td className="border border-slate-900 p-2 text-left text-slate-800">{it.serialNotes || '-'}</td>
+                <table className="min-w-full border-collapse border border-slate-900 text-xs sm:text-sm mb-8">
+                  <thead>
+                    <tr className="bg-slate-50 text-center font-bold border-b border-slate-900 uppercase">
+                      <th className="border border-slate-900 p-2 w-12">STT</th>
+                      <th className="border border-slate-900 p-2">TÊN HÀNG HÓA</th>
+                      <th className="border border-slate-900 p-2 w-32">PART NO</th>
+                      <th className="border border-slate-900 p-2 w-20">SỐ LƯỢNG</th>
+                      <th className="border border-slate-900 p-2">GHI CHÚ – SERIAL</th>
                     </tr>
-                  ))}
-                  {/* Dòng Tổng Cộng */}
-                  <tr className="font-bold text-center bg-slate-50/50">
-                    <td className="border border-slate-900 p-2"></td>
-                    <td className="border border-slate-900 p-2 text-center uppercase">Cộng</td>
-                    <td className="border border-slate-900 p-2"></td>
-                    <td className="border border-slate-900 p-2 text-center text-sm">
-                      {selectedPrintRequest.items.reduce((acc, curr) => acc + Number(curr.quantity), 0)}
-                    </td>
-                    <td className="border border-slate-900 p-2"></td>
-                  </tr>
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {selectedPrintRequest.items.map((it, idx) => (
+                      <tr key={idx} className="text-center">
+                        <td className="border border-slate-900 p-2 font-medium">{idx + 1}</td>
+                        <td className="border border-slate-900 p-2 text-left font-semibold">{it.name}</td>
+                        <td className="border border-slate-900 p-2 font-mono">{it.partNo || it.itemId}</td>
+                        <td className="border border-slate-900 p-2 font-bold">{it.quantity}</td>
+                        <td className="border border-slate-900 p-2 text-left text-slate-800">{it.serialNotes || '-'}</td>
+                      </tr>
+                    ))}
+                    <tr className="font-bold text-center bg-slate-50/50">
+                      <td className="border border-slate-900 p-2"></td>
+                      <td className="border border-slate-900 p-2 text-center uppercase">Cộng</td>
+                      <td className="border border-slate-900 p-2"></td>
+                      <td className="border border-slate-900 p-2 text-center text-sm">
+                        {selectedPrintRequest.items.reduce((acc, curr) => acc + Number(curr.quantity), 0)}
+                      </td>
+                      <td className="border border-slate-900 p-2"></td>
+                    </tr>
+                  </tbody>
+                </table>
 
-              {/* CHỮ KÝ 3 CỘT */}
-              <div className="grid grid-cols-3 gap-4 text-center text-xs sm:text-sm font-semibold pt-4">
-                <div>
-                  <p className="font-bold">
-                    {selectedPrintRequest.type === 'IMPORT' ? 'Người giao hàng' : 'Người nhận hàng'}
-                  </p>
-                  <p className="text-2xs italic text-slate-600 font-normal">(Ký, họ tên)</p>
-                  <div className="h-20"></div>
-                </div>
-                <div>
-                  <p className="font-bold">Kế toán</p>
-                  <p className="text-2xs italic text-slate-600 font-normal">(Ký, họ tên)</p>
-                  <div className="h-20"></div>
-                </div>
-                <div>
-                  <p className="font-bold">Thủ kho</p>
-                  <p className="text-2xs italic text-slate-600 font-normal">(Ký, họ tên)</p>
-                  <div className="h-20"></div>
+                <div className="grid grid-cols-3 gap-4 text-center text-xs sm:text-sm font-semibold pt-4">
+                  <div>
+                    <p className="font-bold">
+                      {selectedPrintRequest.type === 'IMPORT' ? 'Người giao hàng' : 'Người nhận hàng'}
+                    </p>
+                    <p className="text-2xs italic text-slate-600 font-normal">(Ký, họ tên)</p>
+                    <div className="h-20"></div>
+                  </div>
+                  <div>
+                    <p className="font-bold">Kế toán</p>
+                    <p className="text-2xs italic text-slate-600 font-normal">(Ký, họ tên)</p>
+                    <div className="h-20"></div>
+                  </div>
+                  <div>
+                    <p className="font-bold">Thủ kho</p>
+                    <p className="text-2xs italic text-slate-600 font-normal">(Ký, họ tên)</p>
+                    <div className="h-20"></div>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
         )}
 
-        {/* ================= TAB 6: NHÂN VIÊN & KHÁCH HÀNG ================= */}
+        {/* ================= TAB 6: DIRECTORY (NHÂN VIÊN & KHÁCH HÀNG) ================= */}
         {activeTab === 'directory' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* DANH SÁCH NHÂN VIÊN */}
+            {/* Danh sách Nhân viên */}
             <div className="bg-white p-4 sm:p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
@@ -1624,9 +1551,14 @@ export default function App() {
                         <td className="p-2 text-slate-600">{emp.title}</td>
                         <td className="p-2 text-slate-500">{emp.email}</td>
                         <td className="p-2 text-center">
-                          <button onClick={() => handleDeleteEmployee(emp.id)} className="text-red-600 hover:text-red-800 p-1">
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                          <div className="flex items-center justify-center gap-1">
+                            <button onClick={() => handleOpenEmpModal(emp)} className="text-slate-600 hover:text-indigo-600 p-1" title="Sửa">
+                              <Edit className="w-3.5 h-3.5" />
+                            </button>
+                            <button onClick={() => handleDeleteEmployee(emp.id)} className="text-red-600 hover:text-red-800 p-1" title="Xóa">
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -1635,7 +1567,7 @@ export default function App() {
               </div>
             </div>
 
-            {/* DANH SÁCH KHÁCH HÀNG */}
+            {/* Danh sách Khách hàng */}
             <div className="bg-white p-4 sm:p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
@@ -1680,9 +1612,14 @@ export default function App() {
                         <td className="p-2 text-slate-600">{cust.contact}</td>
                         <td className="p-2 text-slate-500">{cust.phone}</td>
                         <td className="p-2 text-center">
-                          <button onClick={() => handleDeleteCustomer(cust.id)} className="text-red-600 hover:text-red-800 p-1">
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                          <div className="flex items-center justify-center gap-1">
+                            <button onClick={() => handleOpenCustModal(cust)} className="text-slate-600 hover:text-indigo-600 p-1" title="Sửa">
+                              <Edit className="w-3.5 h-3.5" />
+                            </button>
+                            <button onClick={() => handleDeleteCustomer(cust.id)} className="text-red-600 hover:text-red-800 p-1" title="Xóa">
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -1693,7 +1630,7 @@ export default function App() {
           </div>
         )}
 
-        {/* ================= TAB 7: KIỂM KÊ KHO THỰC TẾ ================= */}
+        {/* ================= TAB 7: STOCKTAKE ================= */}
         {activeTab === 'stocktake' && (
           <div className="bg-white p-4 sm:p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -1714,11 +1651,6 @@ export default function App() {
                     <option value="WH02">Kho Hồ Chí Minh</option>
                   </select>
                 </div>
-
-                <label className="flex items-center gap-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-2 rounded-lg text-xs font-bold cursor-pointer border border-indigo-200">
-                  <Upload className="w-3.5 h-3.5" /> Nhập Excel Kiểm Kê
-                  <input type="file" accept=".csv" onChange={(e) => handleImportCSV(e, 'STOCKTAKE')} className="hidden" />
-                </label>
 
                 <button
                   onClick={() => handleExportCSV('STOCKTAKE')}
@@ -1783,7 +1715,7 @@ export default function App() {
         )}
       </div>
 
-      {/* --- MODAL TẠO PHIẾU YÊU CẦU NHẬP / XUẤT / CHUYỂN KHO --- */}
+      {/* --- MODAL TẠO PHIẾU --- */}
       {isRequestModalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-xl max-w-xl w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto">
@@ -1822,15 +1754,18 @@ export default function App() {
               </div>
 
               <div className="grid grid-cols-2 gap-3">
+                {/* Lấy họ và tên từ danh sách nhân viên */}
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Họ và tên người yêu cầu:</label>
-                  <input
-                    type="text"
-                    required
+                  <label className="block font-bold text-slate-700 mb-1">Người yêu cầu:</label>
+                  <select
                     value={reqRequesterName}
                     onChange={(e) => setReqRequesterName(e.target.value)}
-                    className="w-full border border-slate-300 rounded-lg p-2"
-                  />
+                    className="w-full border border-slate-300 rounded-lg p-2 font-semibold text-slate-800"
+                  >
+                    {employees.map(emp => (
+                      <option key={emp.id} value={emp.name}>{emp.name} ({emp.title})</option>
+                    ))}
+                  </select>
                 </div>
 
                 {newRequestType !== 'TRANSFER' ? (
@@ -1838,13 +1773,15 @@ export default function App() {
                     <label className="block font-bold text-slate-700 mb-1">
                       {newRequestType === 'IMPORT' ? 'Nhà cung cấp / Đối tác:' : 'Tên khách hàng:'}
                     </label>
-                    <input
-                      type="text"
+                    <select
                       value={reqCustomerName}
                       onChange={(e) => setReqCustomerName(e.target.value)}
-                      placeholder={newRequestType === 'IMPORT' ? 'Nhập tên NCC...' : 'Nhập tên khách hàng...'}
-                      className="w-full border border-slate-300 rounded-lg p-2"
-                    />
+                      className="w-full border border-slate-300 rounded-lg p-2 font-semibold text-slate-800"
+                    >
+                      {customers.map(cust => (
+                        <option key={cust.id} value={cust.fullName}>{cust.fullName}</option>
+                      ))}
+                    </select>
                   </div>
                 ) : (
                   <div>
@@ -1859,7 +1796,6 @@ export default function App() {
                 )}
               </div>
 
-              {/* Lựa chọn kho xuất / kho nhập */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">
@@ -1906,7 +1842,6 @@ export default function App() {
                 )}
               </div>
 
-              {/* Chỉ hiển thị Lý do, Hợp đồng & Thanh toán nếu KHÔNG phải Phiếu Nhập Kho */}
               {newRequestType !== 'IMPORT' && (
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -1962,7 +1897,6 @@ export default function App() {
                 </div>
               )}
 
-              {/* Danh sách vật tư & HIỂN THỊ TỒN KHO THỰC TẾ TRỰC QUAN */}
               <div className="space-y-3 border-t pt-3">
                 <div className="flex justify-between items-center">
                   <label className="block font-bold text-slate-700">Chi Tiết Vật Tư / Hàng Hóa:</label>
@@ -2018,7 +1952,6 @@ export default function App() {
                         )}
                       </div>
 
-                      {/* Thông số Tồn kho của sản phẩm đang chọn */}
                       <div className="flex items-center justify-between text-2xs px-1">
                         <span className="text-slate-500 font-medium">
                           Tồn kho hiện tại: <strong className="text-slate-800">{availableStock} {selectedItemObj?.unit || 'Cái'}</strong>
@@ -2026,7 +1959,7 @@ export default function App() {
 
                         <input
                           type="text"
-                          placeholder="Ghi chú / Số Serial"
+                          placeholder="Ghi chú / Số Serial (mặc định trống)"
                           value={row.serialNotes || ''}
                           onChange={(e) => {
                             const updated = [...reqItemsList];
@@ -2086,7 +2019,7 @@ export default function App() {
         </div>
       )}
 
-      {/* --- MODAL THÊM / SỬA HÀNG HÓA --- */}
+      {/* --- MODAL HÀNG HÓA --- */}
       {isItemModalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 space-y-4">
@@ -2198,6 +2131,7 @@ export default function App() {
                 <input
                   type="text"
                   required
+                  disabled={!!editingEmployee}
                   value={empForm.id}
                   onChange={(e) => setEmpForm({ ...empForm, id: e.target.value })}
                   className="w-full border border-slate-300 rounded-lg p-2 font-mono"
@@ -2275,6 +2209,7 @@ export default function App() {
                 <input
                   type="text"
                   required
+                  disabled={!!editingCustomer}
                   value={custForm.code}
                   onChange={(e) => setCustForm({ ...custForm, code: e.target.value })}
                   className="w-full border border-slate-300 rounded-lg p-2 font-mono"
