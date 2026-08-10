@@ -121,13 +121,47 @@ export default function App() {
   const [currentUserRole, setCurrentUserRole] = useState('Management');
   const [activeTab, setActiveTab] = useState('dashboard');
   
-  const [items, setItems] = useState(INITIAL_ITEMS);
-  const [warehouses] = useState(INITIAL_WAREHOUSES);
-  const [employees, setEmployees] = useState(INITIAL_EMPLOYEES);
-  const [customers, setCustomers] = useState(INITIAL_CUSTOMERS);
-  const [requests, setRequests] = useState(INITIAL_REQUESTS);
+  // Khởi tạo state kết hợp localStorage để không bị mất dữ liệu khi F5
+  const [items, setItems] = useState(() => {
+    const saved = localStorage.getItem('swm_items');
+    return saved ? JSON.parse(saved) : INITIAL_ITEMS;
+  });
 
-  const [selectedPrintRequest, setSelectedPrintRequest] = useState(INITIAL_REQUESTS[0]);
+  const [warehouses] = useState(INITIAL_WAREHOUSES);
+
+  const [employees, setEmployees] = useState(() => {
+    const saved = localStorage.getItem('swm_employees');
+    return saved ? JSON.parse(saved) : INITIAL_EMPLOYEES;
+  });
+
+  const [customers, setCustomers] = useState(() => {
+    const saved = localStorage.getItem('swm_customers');
+    return saved ? JSON.parse(saved) : INITIAL_CUSTOMERS;
+  });
+
+  const [requests, setRequests] = useState(() => {
+    const saved = localStorage.getItem('swm_requests');
+    return saved ? JSON.parse(saved) : INITIAL_REQUESTS;
+  });
+
+  const [selectedPrintRequest, setSelectedPrintRequest] = useState(() => requests[0] || INITIAL_REQUESTS[0]);
+
+  // Tự động lưu vào localStorage mỗi khi state thay đổi
+  useEffect(() => {
+    localStorage.setItem('swm_items', JSON.stringify(items));
+  }, [items]);
+
+  useEffect(() => {
+    localStorage.setItem('swm_employees', JSON.stringify(employees));
+  }, [employees]);
+
+  useEffect(() => {
+    localStorage.setItem('swm_customers', JSON.stringify(customers));
+  }, [customers]);
+
+  useEffect(() => {
+    localStorage.setItem('swm_requests', JSON.stringify(requests));
+  }, [requests]);
 
   // Bộ lọc & Tìm kiếm
   const [searchTerm, setSearchTerm] = useState('');
@@ -138,8 +172,8 @@ export default function App() {
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
   const [newRequestType, setNewRequestType] = useState('EXPORT');
   const [customVoucherId, setCustomVoucherId] = useState('');
-  const [reqRequesterName, setReqRequesterName] = useState(INITIAL_EMPLOYEES[0].name);
-  const [reqCustomerName, setReqCustomerName] = useState(INITIAL_CUSTOMERS[0].fullName);
+  const [reqRequesterName, setReqRequesterName] = useState(employees[0]?.name || 'Nguyễn Trần Cường');
+  const [reqCustomerName, setReqCustomerName] = useState(customers[0]?.fullName || 'BIDV CN Thành Công');
   const [reqWarehouse, setReqWarehouse] = useState('WH01');
   const [reqDestWarehouse, setReqDestWarehouse] = useState('WH02');
   const [reqWorkType, setReqWorkType] = useState('REPAIR_SINGLE');
@@ -178,7 +212,7 @@ export default function App() {
 
   const lowStockItems = useMemo(() => {
     return items.map(item => {
-      const totalStock = Object.values(item.stock).reduce((a, b) => a + b, 0);
+      const totalStock = Object.values(item.stock || {}).reduce((a, b) => a + b, 0);
       return {
         ...item,
         totalStock,
@@ -201,7 +235,7 @@ export default function App() {
       let totalExport = 0;
 
       approvedReqs.forEach(req => {
-        const found = req.items.find(it => it.itemId === item.id);
+        const found = req.items?.find(it => it.itemId === item.id);
         if (found) {
           const qty = Number(found.quantity) || 0;
 
@@ -230,8 +264,8 @@ export default function App() {
       grandTotalExportQty += totalExport;
 
       const currentStock = reportWarehouseFilter === 'ALL' 
-        ? Object.values(item.stock).reduce((a, b) => a + b, 0)
-        : (item.stock[reportWarehouseFilter] || 0);
+        ? Object.values(item.stock || {}).reduce((a, b) => a + b, 0)
+        : (item.stock?.[reportWarehouseFilter] || 0);
 
       return {
         ...item,
@@ -304,8 +338,8 @@ export default function App() {
     if (dataType === 'INVENTORY') {
       csvContent += "Mã Hàng,Tên Hàng Hóa,Part No,Đơn Vị,Kho Hà Nội,Kho HCM,Tổng Tồn,Ngưỡng An Toàn\n";
       items.forEach(i => {
-        const total = Object.values(i.stock).reduce((a, b) => a + b, 0);
-        csvContent += `"${i.id}","${i.name}","${i.partNo || ''}","${i.unit}",${i.stock.WH01 || 0},${i.stock.WH02 || 0},${total},${i.minThreshold}\n`;
+        const total = Object.values(i.stock || {}).reduce((a, b) => a + b, 0);
+        csvContent += `"${i.id}","${i.name}","${i.partNo || ''}","${i.unit}",${i.stock?.WH01 || 0},${i.stock?.WH02 || 0},${total},${i.minThreshold}\n`;
       });
     } else if (dataType === 'IMPORT_EXPORT_REPORT') {
       csvContent += "Mã Hàng,Tên Hàng Hóa,Đơn Vị Tính,Tổng SL Nhập,Tổng SL Xuất,Tồn Kho Hiện Tại,Ngưỡng An Toàn\n";
@@ -315,7 +349,7 @@ export default function App() {
     } else if (dataType === 'REQUESTS') {
       csvContent += "Mã Phiếu,Loại Phiếu,Ngày Tạo,Người Yêu Cầu,Đối Tác / Kho Đích,Kho Nguồn,Trạng Thái,Người Duyệt,Sản Phẩm & Số Lượng,Ghi Chú\n";
       requests.forEach(r => {
-        const itemsStr = r.items.map(it => `${it.name || it.itemId} (SL: ${it.quantity})`).join('; ');
+        const itemsStr = (r.items || []).map(it => `${it.name || it.itemId} (SL: ${it.quantity})`).join('; ');
         const typeLabel = r.type === 'IMPORT' ? 'Nhập kho' : r.type === 'TRANSFER' ? 'Chuyển kho' : 'Xuất kho';
         const partnerLabel = r.type === 'TRANSFER' ? `Kho đích: ${r.destWarehouseId === 'WH01' ? 'Hà Nội' : 'HCM'}` : r.customerName;
         const statusLabel = r.status === 'APPROVED' ? 'Đã duyệt' : r.status === 'REJECTED' ? 'Từ chối' : 'Chờ duyệt';
@@ -335,7 +369,7 @@ export default function App() {
       const whName = stocktakeWH === 'WH01' ? 'Hà Nội' : 'Hồ Chí Minh';
       csvContent += `Mã Hàng,Tên Hàng Hóa,Tồn Máy Tính (${whName}),Tồn Thực Tế,Chênh Lệch\n`;
       items.forEach(i => {
-        const currentStock = i.stock[stocktakeWH] || 0;
+        const currentStock = i.stock?.[stocktakeWH] || 0;
         const inputVal = stocktakeInputs[i.id] !== undefined ? stocktakeInputs[i.id] : currentStock;
         const diff = Number(inputVal) - currentStock;
         csvContent += `"${i.id}","${i.name}",${currentStock},${inputVal},${diff}\n`;
@@ -591,7 +625,7 @@ export default function App() {
           setItems(prevItems => prevItems.map(item => {
             const reqItem = req.items.find(ri => ri.itemId === item.id);
             if (reqItem) {
-              const srcStock = item.stock[req.warehouseId] || 0;
+              const srcStock = item.stock?.[req.warehouseId] || 0;
 
               if (req.type === 'EXPORT') {
                 return {
@@ -604,7 +638,7 @@ export default function App() {
                   stock: { ...item.stock, [req.warehouseId]: srcStock + reqItem.quantity }
                 };
               } else if (req.type === 'TRANSFER') {
-                const destStock = item.stock[req.destWarehouseId] || 0;
+                const destStock = item.stock?.[req.destWarehouseId] || 0;
                 return {
                   ...item,
                   stock: {
@@ -637,7 +671,7 @@ export default function App() {
     const emails = (req.recipientEmails || ['cuongnt@honghatst.vn']).join(',');
     const typeTitle = req.type === 'IMPORT' ? 'Nhập kho' : req.type === 'TRANSFER' ? 'Chuyển kho' : 'Xuất kho';
     const subject = encodeURIComponent(`[THÔNG BÁO KHO] Phiếu ${typeTitle} ${req.id} - ${req.requesterName}`);
-    const itemsSummary = req.items.map(i => `- ${i.name} (${i.partNo ? 'Part: ' + i.partNo + ', ' : ''}SL: ${i.quantity})`).join('\n');
+    const itemsSummary = (req.items || []).map(i => `- ${i.name} (${i.partNo ? 'Part: ' + i.partNo + ', ' : ''}SL: ${i.quantity})`).join('\n');
     
     let whDetail = `Kho xuất: ${req.warehouseId === 'WH01' ? 'Hà Nội' : 'Hồ Chí Minh'}`;
     if (req.type === 'TRANSFER') {
@@ -676,7 +710,7 @@ export default function App() {
   const filteredRequests = useMemo(() => {
     return requests.filter(req => {
       const matchesSearch = req.id.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                            req.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            (req.customerName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
                             req.requesterName.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesType = requestFilterType === 'ALL' || req.type === requestFilterType;
       return matchesSearch && matchesType;
@@ -1028,9 +1062,9 @@ export default function App() {
                 </thead>
                 <tbody className="divide-y divide-slate-200">
                   {items
-                    .filter(i => i.name.toLowerCase().includes(searchTerm.toLowerCase()) || i.id.toLowerCase().includes(searchTerm.toLowerCase()))
+                    .filter(i => (i.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || i.id.toLowerCase().includes(searchTerm.toLowerCase()))
                     .map(item => {
-                      const totalStock = Object.values(item.stock).reduce((a, b) => a + b, 0);
+                      const totalStock = Object.values(item.stock || {}).reduce((a, b) => a + b, 0);
                       const isLow = totalStock <= item.minThreshold;
 
                       return (
@@ -1041,7 +1075,7 @@ export default function App() {
                           <td className="py-2.5 px-3 text-slate-600">{item.unit}</td>
                           {warehouses.map(wh => (
                             <td key={wh.id} className="py-2.5 px-3 text-center font-semibold text-slate-700">
-                              {item.stock[wh.id] || 0}
+                              {item.stock?.[wh.id] || 0}
                             </td>
                           ))}
                           <td className="py-2.5 px-3 text-center font-bold text-slate-900">{totalStock}</td>
@@ -1085,7 +1119,7 @@ export default function App() {
 
                 <button
                   onClick={() => handleExportCSV('REQUESTS')}
-                  className="flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 rounded-lg text-xs font-bold shadow-sm"
+                  className="flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg text-xs font-bold shadow-sm"
                 >
                   <Download className="w-3.5 h-3.5" /> Xuất Excel Phiếu
                 </button>
@@ -1473,7 +1507,7 @@ export default function App() {
                     </tr>
                   </thead>
                   <tbody>
-                    {selectedPrintRequest.items.map((it, idx) => (
+                    {(selectedPrintRequest.items || []).map((it, idx) => (
                       <tr key={idx} className="text-center">
                         <td className="border border-slate-900 p-2 font-medium">{idx + 1}</td>
                         <td className="border border-slate-900 p-2 text-left font-semibold">{it.name}</td>
@@ -1487,7 +1521,7 @@ export default function App() {
                       <td className="border border-slate-900 p-2 text-center uppercase">Cộng</td>
                       <td className="border border-slate-900 p-2"></td>
                       <td className="border border-slate-900 p-2 text-center text-sm">
-                        {selectedPrintRequest.items.reduce((acc, curr) => acc + Number(curr.quantity), 0)}
+                        {(selectedPrintRequest.items || []).reduce((acc, curr) => acc + Number(curr.quantity), 0)}
                       </td>
                       <td className="border border-slate-900 p-2"></td>
                     </tr>
@@ -1695,7 +1729,7 @@ export default function App() {
                 </thead>
                 <tbody className="divide-y divide-slate-200">
                   {items.map(item => {
-                    const currentStock = item.stock[stocktakeWH] || 0;
+                    const currentStock = item.stock?.[stocktakeWH] || 0;
                     const inputVal = stocktakeInputs[item.id] !== undefined ? stocktakeInputs[item.id] : currentStock;
                     const diff = Number(inputVal) - currentStock;
 
@@ -1926,7 +1960,7 @@ export default function App() {
 
                 {reqItemsList.map((row, idx) => {
                   const selectedItemObj = items.find(i => i.id === row.itemId);
-                  const availableStock = selectedItemObj ? (selectedItemObj.stock[reqWarehouse] || 0) : 0;
+                  const availableStock = selectedItemObj ? (selectedItemObj.stock?.[reqWarehouse] || 0) : 0;
                   const isOverStock = (newRequestType === 'EXPORT' || newRequestType === 'TRANSFER') && Number(row.quantity) > availableStock;
 
                   return (
