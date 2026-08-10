@@ -35,7 +35,7 @@ import {
 } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'firebase/auth';
-import { getFirestore, collection, doc, setDoc, getDocs } from 'firebase/firestore';
+import { getFirestore, collection, doc, setDoc, onSnapshot } from 'firebase/firestore';
 
 // --- INITIAL FIREBASE & MOCK SETUP ---
 const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
@@ -157,64 +157,67 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // Firebase Realtime Sync for Cloud Database
+  // Firebase Realtime Sync with onSnapshot
   useEffect(() => {
     if (!user) return;
     
-    const fetchData = async () => {
-      try {
-        // Items
-        const itemsColl = collection(db, 'artifacts', appId, 'public', 'data', 'items');
-        const itemsSnap = await getDocs(itemsColl);
-        if (!itemsSnap.empty) {
-          const loadedItems = itemsSnap.docs.map(doc => doc.data());
-          setItems(loadedItems);
-        } else {
-          INITIAL_ITEMS.forEach(async (item) => {
-            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'items', item.id), item);
-          });
-        }
-
-        // Employees
-        const empColl = collection(db, 'artifacts', appId, 'public', 'data', 'employees');
-        const empSnap = await getDocs(empColl);
-        if (!empSnap.empty) {
-          setEmployees(empSnap.docs.map(doc => doc.data()));
-        } else {
-          INITIAL_EMPLOYEES.forEach(async (emp) => {
-            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'employees', emp.id), emp);
-          });
-        }
-
-        // Customers
-        const custColl = collection(db, 'artifacts', appId, 'public', 'data', 'customers');
-        const custSnap = await getDocs(custColl);
-        if (!custSnap.empty) {
-          setCustomers(custSnap.docs.map(doc => doc.data()));
-        } else {
-          INITIAL_CUSTOMERS.forEach(async (cust) => {
-            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'customers', cust.id), cust);
-          });
-        }
-
-        // Requests
-        const reqColl = collection(db, 'artifacts', appId, 'public', 'data', 'requests');
-        const reqSnap = await getDocs(reqColl);
-        if (!reqSnap.empty) {
-          const loadedReqs = reqSnap.docs.map(doc => doc.data());
-          setRequests(loadedReqs);
-          if (loadedReqs.length > 0) setSelectedPrintRequest(loadedReqs[0]);
-        } else {
-          INITIAL_REQUESTS.forEach(async (req) => {
-            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'requests', req.id.replace(/\//g, '_')), req);
-          });
-        }
-      } catch (err) {
-        console.error("Cloud fetch error:", err);
+    // Items Realtime Listener
+    const itemsColl = collection(db, 'artifacts', appId, 'public', 'data', 'items');
+    const unsubscribeItems = onSnapshot(itemsColl, (snapshot) => {
+      if (!snapshot.empty) {
+        const loadedItems = snapshot.docs.map(doc => doc.data());
+        setItems(loadedItems);
+      } else {
+        INITIAL_ITEMS.forEach(async (item) => {
+          await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'items', item.id), item);
+        });
       }
-    };
+    }, (error) => console.error("Items sync error:", error));
 
-    fetchData();
+    // Employees Realtime Listener
+    const empColl = collection(db, 'artifacts', appId, 'public', 'data', 'employees');
+    const unsubscribeEmps = onSnapshot(empColl, (snapshot) => {
+      if (!snapshot.empty) {
+        setEmployees(snapshot.docs.map(doc => doc.data()));
+      } else {
+        INITIAL_EMPLOYEES.forEach(async (emp) => {
+          await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'employees', emp.id), emp);
+        });
+      }
+    }, (error) => console.error("Employees sync error:", error));
+
+    // Customers Realtime Listener
+    const custColl = collection(db, 'artifacts', appId, 'public', 'data', 'customers');
+    const unsubscribeCusts = onSnapshot(custColl, (snapshot) => {
+      if (!snapshot.empty) {
+        setCustomers(snapshot.docs.map(doc => doc.data()));
+      } else {
+        INITIAL_CUSTOMERS.forEach(async (cust) => {
+          await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'customers', cust.id), cust);
+        });
+      }
+    }, (error) => console.error("Customers sync error:", error));
+
+    // Requests Realtime Listener
+    const reqColl = collection(db, 'artifacts', appId, 'public', 'data', 'requests');
+    const unsubscribeReqs = onSnapshot(reqColl, (snapshot) => {
+      if (!snapshot.empty) {
+        const loadedReqs = snapshot.docs.map(doc => doc.data());
+        setRequests(loadedReqs);
+        if (loadedReqs.length > 0) setSelectedPrintRequest(loadedReqs[0]);
+      } else {
+        INITIAL_REQUESTS.forEach(async (req) => {
+          await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'requests', req.id.replace(/\//g, '_')), req);
+        });
+      }
+    }, (error) => console.error("Requests sync error:", error));
+
+    return () => {
+      unsubscribeItems();
+      unsubscribeEmps();
+      unsubscribeCusts();
+      unsubscribeReqs();
+    };
   }, [user]);
 
   // Helper sync functions
@@ -847,7 +850,7 @@ export default function App() {
               <h1 className="text-base sm:text-lg font-bold tracking-tight text-white leading-none">
                 QUẢN LÝ KHO THÔNG MINH
               </h1>
-              <span className="text-xs text-slate-400">Chuẩn TT 133/2016/TT-BTC (Cloud Sync)</span>
+              <span className="text-xs text-slate-400">Chuẩn TT 133/2016/TT-BTC (Realtime Sync)</span>
             </div>
           </div>
 
@@ -866,7 +869,7 @@ export default function App() {
 
             <div className="hidden lg:flex items-center gap-2 bg-emerald-950 text-emerald-400 border border-emerald-800 px-2.5 py-1 rounded-full text-xs font-mono">
               <Radio className="w-3.5 h-3.5 animate-pulse text-emerald-400" />
-              <span>Cloud Realtime Online</span>
+              <span>Realtime Online</span>
             </div>
 
             <div className="flex items-center gap-2 bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700">
@@ -1227,7 +1230,7 @@ export default function App() {
 
                 <button
                   onClick={() => handleExportCSV('REQUESTS')}
-                  className="flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg text-xs font-bold shadow-sm"
+                  className="flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 rounded-lg text-xs font-bold shadow-sm"
                 >
                   <Download className="w-3.5 h-3.5" /> Xuất Excel Phiếu
                 </button>
