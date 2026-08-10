@@ -134,7 +134,7 @@ export default function App() {
   const [requestFilterType, setRequestFilterType] = useState('ALL');
   const [reportWarehouseFilter, setReportWarehouseFilter] = useState('ALL');
 
-  // Modal tạo phiếu (mặc định lấy nhân viên đầu tiên và khách hàng đầu tiên)
+  // Modal tạo phiếu
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
   const [newRequestType, setNewRequestType] = useState('EXPORT');
   const [customVoucherId, setCustomVoucherId] = useState('');
@@ -421,6 +421,22 @@ export default function App() {
         }
         setCustomers(newCusts);
         showToast(`Đã nhập thành công ${addedCount} khách hàng từ file!`);
+      } else if (dataType === 'STOCKTAKE' && rows.length > 1) {
+        const newInputs = { ...stocktakeInputs };
+        let count = 0;
+        for (let i = 1; i < rows.length; i++) {
+          const r = rows[i];
+          if (r.length >= 4 && r[0]) {
+            const itemId = r[0];
+            const actualQty = Number(r[3]);
+            if (!isNaN(actualQty)) {
+              newInputs[itemId] = actualQty;
+              count++;
+            }
+          }
+        }
+        setStocktakeInputs(newInputs);
+        showToast(`Đã nhập dữ liệu kiểm kê thực tế cho ${count} mặt hàng từ file!`);
       }
       e.target.value = null;
     };
@@ -694,7 +710,6 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-4">
-            {/* Thanh sao lưu toàn bộ dữ liệu hệ thống */}
             <div className="flex items-center gap-1.5 bg-slate-800 px-3 py-1 rounded-lg border border-slate-700">
               <Database className="w-4 h-4 text-emerald-400" />
               <button onClick={handleExportAllData} className="text-xs font-bold text-emerald-400 hover:underline">
@@ -1070,7 +1085,7 @@ export default function App() {
 
                 <button
                   onClick={() => handleExportCSV('REQUESTS')}
-                  className="flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg text-xs font-bold shadow-sm"
+                  className="flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 rounded-lg text-xs font-bold shadow-sm"
                 >
                   <Download className="w-3.5 h-3.5" /> Xuất Excel Phiếu
                 </button>
@@ -1652,6 +1667,11 @@ export default function App() {
                   </select>
                 </div>
 
+                <label className="flex items-center gap-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-2 rounded-lg text-xs font-bold cursor-pointer border border-indigo-200">
+                  <Upload className="w-3.5 h-3.5" /> Nhập Excel Kiểm Kê
+                  <input type="file" accept=".csv" onChange={(e) => handleImportCSV(e, 'STOCKTAKE')} className="hidden" />
+                </label>
+
                 <button
                   onClick={() => handleExportCSV('STOCKTAKE')}
                   className="flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg text-xs font-bold shadow-sm"
@@ -1754,7 +1774,6 @@ export default function App() {
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                {/* Lấy họ và tên từ danh sách nhân viên */}
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">Người yêu cầu:</label>
                   <select
