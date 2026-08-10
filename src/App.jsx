@@ -33,8 +33,17 @@ import {
   Calendar,
   Database
 } from 'lucide-react';
+import { initializeApp } from 'firebase/app';
+import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'firebase/auth';
+import { getFirestore, collection, doc, setDoc, getDocs } from 'firebase/firestore';
 
-// --- DỮ LIỆU BAN ĐẦU ---
+// --- INITIAL FIREBASE & MOCK SETUP ---
+const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-warehouse-app';
+
 const INITIAL_WAREHOUSES = [
   { id: 'WH01', name: 'Hà Nội', location: 'Cầu Giấy, Hà Nội' },
   { id: 'WH02', name: 'Hồ Chí Minh', location: 'Quận 9, TP. HCM' },
@@ -118,50 +127,136 @@ export default function App() {
     }
   }, []);
 
+  const [user, setUser] = useState(null);
   const [currentUserRole, setCurrentUserRole] = useState('Management');
   const [activeTab, setActiveTab] = useState('dashboard');
   
-  // Khởi tạo state kết hợp localStorage để không bị mất dữ liệu khi F5
-  const [items, setItems] = useState(() => {
-    const saved = localStorage.getItem('swm_items');
-    return saved ? JSON.parse(saved) : INITIAL_ITEMS;
-  });
-
+  const [items, setItems] = useState(INITIAL_ITEMS);
   const [warehouses] = useState(INITIAL_WAREHOUSES);
+  const [employees, setEmployees] = useState(INITIAL_EMPLOYEES);
+  const [customers, setCustomers] = useState(INITIAL_CUSTOMERS);
+  const [requests, setRequests] = useState(INITIAL_REQUESTS);
 
-  const [employees, setEmployees] = useState(() => {
-    const saved = localStorage.getItem('swm_employees');
-    return saved ? JSON.parse(saved) : INITIAL_EMPLOYEES;
-  });
+  const [selectedPrintRequest, setSelectedPrintRequest] = useState(INITIAL_REQUESTS[0]);
 
-  const [customers, setCustomers] = useState(() => {
-    const saved = localStorage.getItem('swm_customers');
-    return saved ? JSON.parse(saved) : INITIAL_CUSTOMERS;
-  });
-
-  const [requests, setRequests] = useState(() => {
-    const saved = localStorage.getItem('swm_requests');
-    return saved ? JSON.parse(saved) : INITIAL_REQUESTS;
-  });
-
-  const [selectedPrintRequest, setSelectedPrintRequest] = useState(() => requests[0] || INITIAL_REQUESTS[0]);
-
-  // Tự động lưu vào localStorage mỗi khi state thay đổi
+  // Firebase Authentication setup
   useEffect(() => {
-    localStorage.setItem('swm_items', JSON.stringify(items));
-  }, [items]);
+    const initAuth = async () => {
+      try {
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          await signInWithCustomToken(auth, __initial_auth_token);
+        } else {
+          await signInAnonymously(auth);
+        }
+      } catch (err) {
+        console.error("Auth error:", err);
+      }
+    };
+    initAuth();
+    const unsubscribe = onAuthStateChanged(auth, setUser);
+    return () => unsubscribe();
+  }, []);
 
+  // Firebase Realtime Sync for Cloud Database
   useEffect(() => {
-    localStorage.setItem('swm_employees', JSON.stringify(employees));
-  }, [employees]);
+    if (!user) return;
+    
+    const fetchData = async () => {
+      try {
+        // Items
+        const itemsColl = collection(db, 'artifacts', appId, 'public', 'data', 'items');
+        const itemsSnap = await getDocs(itemsColl);
+        if (!itemsSnap.empty) {
+          const loadedItems = itemsSnap.docs.map(doc => doc.data());
+          setItems(loadedItems);
+        } else {
+          INITIAL_ITEMS.forEach(async (item) => {
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'items', item.id), item);
+          });
+        }
 
-  useEffect(() => {
-    localStorage.setItem('swm_customers', JSON.stringify(customers));
-  }, [customers]);
+        // Employees
+        const empColl = collection(db, 'artifacts', appId, 'public', 'data', 'employees');
+        const empSnap = await getDocs(empColl);
+        if (!empSnap.empty) {
+          setEmployees(empSnap.docs.map(doc => doc.data()));
+        } else {
+          INITIAL_EMPLOYEES.forEach(async (emp) => {
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'employees', emp.id), emp);
+          });
+        }
 
-  useEffect(() => {
-    localStorage.setItem('swm_requests', JSON.stringify(requests));
-  }, [requests]);
+        // Customers
+        const custColl = collection(db, 'artifacts', appId, 'public', 'data', 'customers');
+        const custSnap = await getDocs(custColl);
+        if (!custSnap.empty) {
+          setCustomers(custSnap.docs.map(doc => doc.data()));
+        } else {
+          INITIAL_CUSTOMERS.forEach(async (cust) => {
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'customers', cust.id), cust);
+          });
+        }
+
+        // Requests
+        const reqColl = collection(db, 'artifacts', appId, 'public', 'data', 'requests');
+        const reqSnap = await getDocs(reqColl);
+        if (!reqSnap.empty) {
+          const loadedReqs = reqSnap.docs.map(doc => doc.data());
+          setRequests(loadedReqs);
+          if (loadedReqs.length > 0) setSelectedPrintRequest(loadedReqs[0]);
+        } else {
+          INITIAL_REQUESTS.forEach(async (req) => {
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'requests', req.id.replace(/\//g, '_')), req);
+          });
+        }
+      } catch (err) {
+        console.error("Cloud fetch error:", err);
+      }
+    };
+
+    fetchData();
+  }, [user]);
+
+  // Helper sync functions
+  const saveItemToCloud = async (newItemList) => {
+    setItems(newItemList);
+    if (!user) return;
+    try {
+      newItemList.forEach(async (item) => {
+        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'items', item.id), item);
+      });
+    } catch (e) { console.error(e); }
+  };
+
+  const saveEmployeesToCloud = async (newEmpList) => {
+    setEmployees(newEmpList);
+    if (!user) return;
+    try {
+      newEmpList.forEach(async (emp) => {
+        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'employees', emp.id), emp);
+      });
+    } catch (e) { console.error(e); }
+  };
+
+  const saveCustomersToCloud = async (newCustList) => {
+    setCustomers(newCustList);
+    if (!user) return;
+    try {
+      newCustList.forEach(async (cust) => {
+        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'customers', cust.id), cust);
+      });
+    } catch (e) { console.error(e); }
+  };
+
+  const saveRequestsToCloud = async (newReqList) => {
+    setRequests(newReqList);
+    if (!user) return;
+    try {
+      newReqList.forEach(async (req) => {
+        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'requests', req.id.replace(/\//g, '_')), req);
+      });
+    } catch (e) { console.error(e); }
+  };
 
   // Bộ lọc & Tìm kiếm
   const [searchTerm, setSearchTerm] = useState('');
@@ -312,14 +407,14 @@ export default function App() {
       try {
         const parsed = JSON.parse(event.target.result);
         if (parsed.items && parsed.employees && parsed.customers && parsed.requests) {
-          setItems(parsed.items);
-          setEmployees(parsed.employees);
-          setCustomers(parsed.customers);
-          setRequests(parsed.requests);
+          saveItemToCloud(parsed.items);
+          saveEmployeesToCloud(parsed.employees);
+          saveCustomersToCloud(parsed.customers);
+          saveRequestsToCloud(parsed.requests);
           if (parsed.requests.length > 0) {
             setSelectedPrintRequest(parsed.requests[0]);
           }
-          showToast('Đã khôi phục toàn bộ dữ liệu hệ thống thành công!');
+          showToast('Đã khôi phục toàn bộ dữ liệu hệ thống lên đám mây thành công!');
         } else {
           alert('Cấu trúc file sao lưu không hợp lệ!');
         }
@@ -423,8 +518,8 @@ export default function App() {
             }
           }
         }
-        setItems(newItems);
-        showToast(`Đã nhập thành công ${addedCount} mặt hàng từ file!`);
+        saveItemToCloud(newItems);
+        showToast(`Đã nhập thành công ${addedCount} mặt hàng lên đám mây!`);
       } else if (dataType === 'EMPLOYEES' && rows.length > 1) {
         const newEmps = [...employees];
         let addedCount = 0;
@@ -438,8 +533,8 @@ export default function App() {
             }
           }
         }
-        setEmployees(newEmps);
-        showToast(`Đã nhập thành công ${addedCount} nhân viên từ file!`);
+        saveEmployeesToCloud(newEmps);
+        showToast(`Đã nhập thành công ${addedCount} nhân viên lên đám mây!`);
       } else if (dataType === 'CUSTOMERS' && rows.length > 1) {
         const newCusts = [...customers];
         let addedCount = 0;
@@ -453,8 +548,8 @@ export default function App() {
             }
           }
         }
-        setCustomers(newCusts);
-        showToast(`Đã nhập thành công ${addedCount} khách hàng từ file!`);
+        saveCustomersToCloud(newCusts);
+        showToast(`Đã nhập thành công ${addedCount} khách hàng lên đám mây!`);
       } else if (dataType === 'STOCKTAKE' && rows.length > 1) {
         const newInputs = { ...stocktakeInputs };
         let count = 0;
@@ -470,7 +565,7 @@ export default function App() {
           }
         }
         setStocktakeInputs(newInputs);
-        showToast(`Đã nhập dữ liệu kiểm kê thực tế cho ${count} mặt hàng từ file!`);
+        showToast(`Đã nhập dữ liệu kiểm kê thực tế cho ${count} mặt hàng!`);
       }
       e.target.value = null;
     };
@@ -491,18 +586,21 @@ export default function App() {
 
   const handleSaveItem = (e) => {
     e.preventDefault();
+    let updated;
     if (editingItem) {
-      setItems(items.map(i => i.id === editingItem.id ? { ...i, ...itemForm } : i));
+      updated = items.map(i => i.id === editingItem.id ? { ...i, ...itemForm } : i);
       showToast('Đã cập nhật hàng hóa thành công!');
     } else {
-      setItems([...items, { ...itemForm, stock: { WH01: 0, WH02: 0 } }]);
+      updated = [...items, { ...itemForm, stock: { WH01: 0, WH02: 0 } }];
       showToast('Đã thêm mặt hàng mới!');
     }
+    saveItemToCloud(updated);
     setIsItemModalOpen(false);
   };
 
   const handleDeleteItem = (id) => {
-    setItems(items.filter(i => i.id !== id));
+    const updated = items.filter(i => i.id !== id);
+    saveItemToCloud(updated);
     showToast('Đã xóa mặt hàng!');
   };
 
@@ -520,18 +618,21 @@ export default function App() {
 
   const handleSaveEmployee = (e) => {
     e.preventDefault();
+    let updated;
     if (editingEmployee) {
-      setEmployees(employees.map(emp => emp.id === editingEmployee.id ? empForm : emp));
+      updated = employees.map(emp => emp.id === editingEmployee.id ? empForm : emp);
       showToast('Đã cập nhật nhân viên thành công!');
     } else {
-      setEmployees([...employees, empForm]);
+      updated = [...employees, empForm];
       showToast('Đã thêm nhân viên mới!');
     }
+    saveEmployeesToCloud(updated);
     setIsEmployeeModalOpen(false);
   };
 
   const handleDeleteEmployee = (id) => {
-    setEmployees(employees.filter(e => e.id !== id));
+    const updated = employees.filter(e => e.id !== id);
+    saveEmployeesToCloud(updated);
     showToast('Đã xóa nhân viên!');
   };
 
@@ -549,18 +650,21 @@ export default function App() {
 
   const handleSaveCustomer = (e) => {
     e.preventDefault();
+    let updated;
     if (editingCustomer) {
-      setCustomers(customers.map(c => c.id === editingCustomer.id ? custForm : c));
+      updated = customers.map(c => c.id === editingCustomer.id ? custForm : c);
       showToast('Đã cập nhật khách hàng thành công!');
     } else {
-      setCustomers([...customers, custForm]);
+      updated = [...customers, custForm];
       showToast('Đã thêm khách hàng mới!');
     }
+    saveCustomersToCloud(updated);
     setIsCustomerModalOpen(false);
   };
 
   const handleDeleteCustomer = (id) => {
-    setCustomers(customers.filter(c => c.id !== id));
+    const updated = customers.filter(c => c.id !== id);
+    saveCustomersToCloud(updated);
     showToast('Đã xóa khách hàng!');
   };
 
@@ -579,7 +683,7 @@ export default function App() {
         name: matchedItem ? matchedItem.name : '',
         partNo: matchedItem ? (matchedItem.partNo || '') : '',
         quantity: Number(ri.quantity) || 1,
-        serialNotes: ri.serialNotes || '' // mặc định trống
+        serialNotes: ri.serialNotes || ''
       };
     });
 
@@ -609,20 +713,22 @@ export default function App() {
       recipientEmails: ['cuongnt@honghatst.vn', 'an.nguyen@company.com']
     };
 
-    setRequests([newReq, ...requests]);
+    const updatedReqs = [newReq, ...requests];
+    saveRequestsToCloud(updatedReqs);
     setSelectedPrintRequest(newReq);
     setIsRequestModalOpen(false);
     setCustomVoucherId('');
-    showToast(`⚡ Đã tạo phiếu yêu cầu ${newReq.id} thành công!`);
+    showToast(`⚡ Đã tạo phiếu yêu cầu ${newReq.id} trên đám mây thành công!`);
   };
 
   const handleApproveRequest = (reqId, isApprove) => {
+    let updatedItems = [...items];
     const updatedRequests = requests.map(req => {
       if (req.id === reqId) {
         const newStatus = isApprove ? 'APPROVED' : 'REJECTED';
         
         if (isApprove) {
-          setItems(prevItems => prevItems.map(item => {
+          updatedItems = updatedItems.map(item => {
             const reqItem = req.items.find(ri => ri.itemId === item.id);
             if (reqItem) {
               const srcStock = item.stock?.[req.warehouseId] || 0;
@@ -650,7 +756,7 @@ export default function App() {
               }
             }
             return item;
-          }));
+          });
         }
 
         return {
@@ -662,8 +768,9 @@ export default function App() {
       return req;
     });
 
-    setRequests(updatedRequests);
-    showToast(isApprove ? `Đã phê duyệt ${reqId} & cập nhật tồn kho!` : `Đã từ chối phiếu ${reqId}`);
+    saveItemToCloud(updatedItems);
+    saveRequestsToCloud(updatedRequests);
+    showToast(isApprove ? `Đã phê duyệt ${reqId} & cập nhật tồn kho đám mây!` : `Đã từ chối phiếu ${reqId}`);
   };
 
   const handleOpenGmailWeb = (req) => {
@@ -695,7 +802,7 @@ export default function App() {
     const val = stocktakeInputs[itemId];
     if (val === undefined || val === '') return;
     
-    setItems(prev => prev.map(item => {
+    const updated = items.map(item => {
       if (item.id === itemId) {
         return {
           ...item,
@@ -703,8 +810,9 @@ export default function App() {
         };
       }
       return item;
-    }));
-    showToast(`Đã điều chỉnh tồn kho thực tế cho sản phẩm ${itemId}!`);
+    });
+    saveItemToCloud(updated);
+    showToast(`Đã điều chỉnh tồn kho thực tế cho sản phẩm ${itemId} trên đám mây!`);
   };
 
   const filteredRequests = useMemo(() => {
@@ -739,7 +847,7 @@ export default function App() {
               <h1 className="text-base sm:text-lg font-bold tracking-tight text-white leading-none">
                 QUẢN LÝ KHO THÔNG MINH
               </h1>
-              <span className="text-xs text-slate-400">Chuẩn TT 133/2016/TT-BTC</span>
+              <span className="text-xs text-slate-400">Chuẩn TT 133/2016/TT-BTC (Cloud Sync)</span>
             </div>
           </div>
 
@@ -758,7 +866,7 @@ export default function App() {
 
             <div className="hidden lg:flex items-center gap-2 bg-emerald-950 text-emerald-400 border border-emerald-800 px-2.5 py-1 rounded-full text-xs font-mono">
               <Radio className="w-3.5 h-3.5 animate-pulse text-emerald-400" />
-              <span>Realtime Online</span>
+              <span>Cloud Realtime Online</span>
             </div>
 
             <div className="flex items-center gap-2 bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700">
